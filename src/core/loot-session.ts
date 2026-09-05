@@ -1,5 +1,5 @@
 import type { AlertHistoryView, LootItemView, LootMatchView } from "../shared/contracts.ts";
-import { artifactFacts, cosmeticFacts, equipmentFacts, gemFacts, stackFacts, type Facts } from "./catalog.ts";
+import { artifactFacts, equipmentFacts, gemFacts, stackFacts, type Facts } from "./catalog.ts";
 import { STACK_KINDS } from "../shared/loot-kinds.ts";
 import { matchLoot, type LootContext, type LootMatch } from "./filter/loot-filter.ts";
 import { parseLootFilter, type ParsedFilter } from "./filter/loot-dsl.ts";
@@ -86,7 +86,6 @@ export class LootSession {
     for (const item of inventory.equips) add(equipmentFacts(item, threshold));
     for (const item of inventory.artifacts) add(artifactFacts(item, threshold));
     for (const item of inventory.gems) add(gemFacts(item));
-    for (const item of inventory.cosmetics) add(cosmeticFacts(item));
     for (const [kind, bucket] of STACK_KINDS) {
       for (const item of inventory[bucket]) add(stackFacts(item, kind));
     }

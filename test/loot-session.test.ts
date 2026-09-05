@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { artifactFacts, equipmentFacts } from "../src/core/catalog.ts";
 import { LootSession } from "../src/core/loot-session.ts";
-import type { SaviArtifact, SaviCosmetic, SaviEquip, SaviGem, SaviInventory, SaviSnapshot, SaviStack, SaviSubstat } from "../src/core/types.ts";
+import type { SaviArtifact, SaviEquip, SaviGem, SaviInventory, SaviSnapshot, SaviStack, SaviSubstat } from "../src/core/types.ts";
 
 function equipment(uid: string, substats: Array<SaviSubstat | null> = []): SaviEquip {
   return {
@@ -58,7 +58,7 @@ function snapshot(inventory: Partial<SaviInventory> = {}, partial = false): Savi
     capturedAt: "",
     partial,
     inventory: {
-      equips: [], artifacts: [], cards: [], gems: [], junks: [], consumables: [], cosmetics: [],
+      equips: [], artifacts: [], cards: [], gems: [], junks: [], consumables: [],
       ...inventory,
     },
   };
@@ -263,36 +263,14 @@ test("a growing consumable stack is reported as an addition", () => {
   expect(same.added).toHaveLength(0);
 });
 
-test("cosmetics enter the bag and keep their own kind", () => {
-  const session = new LootSession();
-  session.consume(snapshot());
-  const result = session.consume(snapshot({ cosmetics: [
-    { uid: "c1", itemId: "Back_CrystalWings", refine: 1, rarity: 3, shiny: true, favorite: false },
-  ] }));
-
-  expect(result.added).toHaveLength(1);
-  expect(result.added[0]).toMatchObject({
-    uid: "c1",
-    itemId: "Back_CrystalWings",
-    name: "Crystal Wings",
-    type: "Cosmetic",
-    kind: "cosmetic",
-    refine: 1,
-    count: 1,
-  });
-});
-
 test("names the ids the local catalog does not carry", () => {
   const session = new LootSession();
   session.consume(snapshot());
-  const result = session.consume(snapshot({
-    junks: [stack("Acorn", 5)],
-    cosmetics: [{ uid: "aura", itemId: "Aura_Angel", refine: 0, rarity: 2, shiny: false, favorite: false }],
-  }));
+  const result = session.consume(snapshot({ junks: [stack("Acorn", 5)] }));
 
-  // The bundled FishNet directory covers materials and cosmetics that assets/catalog.json omits,
+  // The bundled FishNet directory covers the materials assets/catalog.json omits,
   // so they read as real items instead of raw wire ids tagged NEW?.
-  expect(result.added.map((item) => item.name).sort()).toEqual(["Acorn", "Angelic Aura"]);
+  expect(result.added.map((item) => item.name)).toEqual(["Acorn"]);
   expect(result.added.every((item) => item.match?.tag !== "NEW?")).toBe(true);
 });
 

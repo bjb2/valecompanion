@@ -53,17 +53,6 @@ export interface SaviStack {
   favorite: boolean;
 }
 
-/** CosmeticData { Rarity, Shiny } : RefinableItemData { UID, Refine } : InventoryItemData. */
-export interface SaviCosmetic {
-  uid: string | null;
-  itemId: string;
-  refine: number;
-  /** Game `Rarity` enum value. */
-  rarity: number;
-  shiny: boolean;
-  favorite: boolean;
-}
-
 export interface SaviInventory {
   equips: SaviEquip[];
   artifacts: SaviArtifact[];
@@ -71,7 +60,6 @@ export interface SaviInventory {
   gems: SaviGem[];
   junks: SaviStack[];
   consumables: SaviStack[];
-  cosmetics: SaviCosmetic[];
 }
 
 export interface SaviSkill {

@@ -20,7 +20,7 @@
 
 import { Reader } from './wire.ts';
 import type {
-  SaviArtifact, SaviCosmetic, SaviEquip, SaviGem, SaviInventory, SaviSkill, SaviSnapshot, SaviStack, SaviSubstat,
+  SaviArtifact, SaviEquip, SaviGem, SaviInventory, SaviSkill, SaviSnapshot, SaviStack, SaviSubstat,
 } from './types.ts';
 
 /** `CharacterCallback_T` update mask meaning "the whole character" (all bits the client sets). */
@@ -329,16 +329,14 @@ function readStack(r: Reader): SaviStack | undefined {
   return itemId ? { itemId, count: Math.max(0, count), favorite } : undefined;
 }
 
-/** CosmeticData { Rarity, Shiny } : RefinableItemData : InventoryItemData. */
-function readCosmetic(r: Reader): SaviCosmetic | undefined {
-  if (!r.objectRef()) return undefined;
-  const rarity = r.packed();
-  const shiny = r.bool();
-  const uid = r.string(UID_MAX);
-  const refine = r.packed();
-  const itemId = r.string(ID_MAX);
-  const favorite = r.bool();
-  return itemId ? { uid, itemId, refine, rarity, shiny, favorite } : undefined;
+/**
+ * CosmeticData { Rarity, Shiny } : RefinableItemData : InventoryItemData.
+ * Consumed but not kept: on live data this dictionary holds card ids that the Cards dictionary
+ * already counts, so surfacing it in the bag showed the same cards twice.
+ */
+function skipCosmetic(r: Reader): void {
+  if (!r.objectRef()) return;
+  r.packed(); r.bool(); r.string(UID_MAX); r.packed(); r.string(ID_MAX); r.bool();
 }
 
 /** SkillSystemData { Skills, Assigned, SkillCopy, Reanimations }. */
@@ -379,6 +377,6 @@ function readInventory(r: Reader): SaviInventory | undefined {
   const gems = r.dict(() => readGem(r)).filter(isPresent);
   const junks = r.dict(() => readStack(r)).filter(isPresent);
   const consumables = r.dict(() => readStack(r)).filter(isPresent);
-  const cosmetics = r.dict(() => readCosmetic(r)).filter(isPresent);
-  return { equips, artifacts, cards, gems, junks, consumables, cosmetics };
+  r.dict(() => skipCosmetic(r));
+  return { equips, artifacts, cards, gems, junks, consumables };
 }

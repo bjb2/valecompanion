@@ -29,7 +29,6 @@ const KINDS = {
   gem: { label: "Gems", sigil: "G", flatType: "Gem", fungible: true, itemType: 5 },
   grimoire: { label: "Grimoires", sigil: "R", fungible: false, itemType: 2 },
   material: { label: "Materials", sigil: "M", flatType: "Material", fungible: true, itemType: 0, stackBucket: "junks" },
-  cosmetic: { label: "Cosmetics", sigil: "K", flatType: "Cosmetic", fungible: false, itemType: 6 },
 } as const satisfies Record<string, LootKindInfo>;
 
 export type LootKind = keyof typeof KINDS;

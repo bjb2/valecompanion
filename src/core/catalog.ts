@@ -5,7 +5,7 @@ import { fishNetMarketStatName } from "@kar-mi/spirit-vale-tools-market";
 import type { LootItemView, LootLine } from "../shared/contracts.ts";
 import { LOOT_KINDS, type LootKind, type StackKind } from "../shared/loot-kinds.ts";
 import type { OwnedGear, RollLine } from "./filter/types.ts";
-import { ARTIFACT_SLOT_NAMES, type SaviArtifact, type SaviCosmetic, type SaviEquip, type SaviGem, type SaviStack, type SaviSubstat } from "./types.ts";
+import { ARTIFACT_SLOT_NAMES, type SaviArtifact, type SaviEquip, type SaviGem, type SaviStack, type SaviSubstat } from "./types.ts";
 
 type CatalogEntry = {
   name: string;
@@ -185,9 +185,9 @@ export function artifactFacts(item: SaviArtifact, highRollThreshold = 90): Facts
 }
 
 /**
- * One bag entry for an item that carries no rolls: gems, cosmetics, and the counted stacks.
+ * One bag entry for an item that carries no rolls: gems and the counted stacks.
  * The local catalog wins on names and icons; the bundled FishNet directory covers the ids it
- * lacks, which is most materials and every cosmetic.
+ * lacks, which is most materials.
  */
 function flatFacts(kind: LootKind, item: { itemId: string; favorite: boolean }, uid: string, refine: number, count: number): Facts {
   const { flatType, itemType } = LOOT_KINDS[kind];
@@ -230,10 +230,6 @@ function flatFacts(kind: LootKind, item: { itemId: string; favorite: boolean }, 
 
 export function gemFacts(item: SaviGem): Facts {
   return flatFacts("gem", item, item.uid ?? `${item.itemId}:gem`, item.refine, 1);
-}
-
-export function cosmeticFacts(item: SaviCosmetic): Facts {
-  return flatFacts("cosmetic", item, item.uid ?? `${item.itemId}:cosmetic`, item.refine, 1);
 }
 
 export function stackFacts(item: SaviStack, kind: StackKind): Facts {
