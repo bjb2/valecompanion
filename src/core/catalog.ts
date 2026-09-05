@@ -3,8 +3,9 @@ import path from "node:path";
 import { resolveFishNetItem } from "@kar-mi/spirit-vale-tools-items";
 import { fishNetMarketStatName } from "@kar-mi/spirit-vale-tools-market";
 import type { LootItemView, LootLine } from "../shared/contracts.ts";
+import { LOOT_KINDS, type LootKind, type StackKind } from "../shared/loot-kinds.ts";
 import type { OwnedGear, RollLine } from "./filter/types.ts";
-import { ARTIFACT_SLOT_NAMES, type SaviArtifact, type SaviEquip, type SaviGem, type SaviStack, type SaviSubstat } from "./types.ts";
+import { ARTIFACT_SLOT_NAMES, type SaviArtifact, type SaviCosmetic, type SaviEquip, type SaviGem, type SaviStack, type SaviSubstat } from "./types.ts";
 
 type CatalogEntry = {
   name: string;
@@ -15,7 +16,7 @@ type CatalogEntry = {
 };
 
 type DecodedLine = LootLine & { top: boolean };
-type Facts = OwnedGear & { view: Omit<LootItemView, "match"> };
+export type Facts = OwnedGear & { view: Omit<LootItemView, "match"> };
 
 const catalogPath = existsSync(path.join(import.meta.dir, "catalog.json"))
   ? path.join(import.meta.dir, "catalog.json")
@@ -154,7 +155,8 @@ function makeFacts(
       itemId: item.itemId,
       name,
       type,
-      kind,
+      // A grimoire is equipment on the wire but its own thing in the bag.
+      kind: exact?.slot === "Grimoire" ? "grimoire" : kind,
       icon: exact?.icon ? path.basename(exact.icon) : null,
       refine: item.refine,
       count: 1,
@@ -182,17 +184,39 @@ export function artifactFacts(item: SaviArtifact, highRollThreshold = 90): Facts
   return makeFacts("artifact", item, highRollThreshold);
 }
 
-export function gemFacts(item: SaviGem): Facts {
+/**
+ * One bag entry for an item that carries no rolls: gems, cosmetics, and the counted stacks.
+ * The local catalog wins on names and icons; the bundled FishNet directory covers the ids it
+ * lacks, which is most materials and every cosmetic.
+ */
+function flatFacts(kind: LootKind, item: { itemId: string; favorite: boolean }, uid: string, refine: number, count: number): Facts {
+  const { flatType, itemType } = LOOT_KINDS[kind];
+  const type = flatType ?? "Unknown";
   const exact = exactCatalog[item.itemId];
-  const definition = resolveFishNetItem(5, item.itemId);
-  const uid = item.uid ?? `${item.itemId}:gem`;
+  const definition = resolveFishNetItem(itemType, item.itemId);
   const name = exact?.name ?? definition?.displayName ?? item.itemId;
+  const view = {
+    uid,
+    itemId: item.itemId,
+    name,
+    type,
+    kind,
+    icon: exact?.icon ? path.basename(exact.icon) : null,
+    refine,
+    count,
+    favorite: item.favorite,
+    hasChaos: false,
+    topRolls: 0,
+    highRolls: 0,
+    avgRollPct: null,
+    lines: [],
+  };
   return {
     uid,
     itemId: item.itemId,
     name,
-    slotType: "Gem",
-    refine: item.refine,
+    slotType: type,
+    refine,
     lines: [],
     topRolls: 0,
     highRolls: 0,
@@ -200,57 +224,18 @@ export function gemFacts(item: SaviGem): Facts {
     favorite: item.favorite,
     hasChaos: false,
     ...(definition || exact ? {} : { unknown: true as const }),
-    view: {
-      uid,
-      itemId: item.itemId,
-      name,
-      type: "Gem",
-      kind: "gem",
-      icon: exact?.icon ? path.basename(exact.icon) : null,
-      refine: item.refine,
-      count: 1,
-      favorite: item.favorite,
-      hasChaos: false,
-      topRolls: 0,
-      highRolls: 0,
-      avgRollPct: null,
-      lines: [],
-    },
+    view,
   };
 }
 
-export function cardFacts(item: SaviStack): Facts {
-  const exact = exactCatalog[item.itemId];
-  const uid = `${item.itemId}:card`;
-  const name = exact?.name ?? item.itemId;
-  return {
-    uid,
-    itemId: item.itemId,
-    name,
-    slotType: "Card",
-    refine: 0,
-    lines: [],
-    topRolls: 0,
-    highRolls: 0,
-    avgRollPct: null,
-    favorite: item.favorite,
-    hasChaos: false,
-    ...(exact ? {} : { unknown: true as const }),
-    view: {
-      uid,
-      itemId: item.itemId,
-      name,
-      type: "Card",
-      kind: "card",
-      icon: exact?.icon ? path.basename(exact.icon) : null,
-      refine: 0,
-      count: item.count,
-      favorite: item.favorite,
-      hasChaos: false,
-      topRolls: 0,
-      highRolls: 0,
-      avgRollPct: null,
-      lines: [],
-    },
-  };
+export function gemFacts(item: SaviGem): Facts {
+  return flatFacts("gem", item, item.uid ?? `${item.itemId}:gem`, item.refine, 1);
+}
+
+export function cosmeticFacts(item: SaviCosmetic): Facts {
+  return flatFacts("cosmetic", item, item.uid ?? `${item.itemId}:cosmetic`, item.refine, 1);
+}
+
+export function stackFacts(item: SaviStack, kind: StackKind): Facts {
+  return flatFacts(kind, item, `${item.itemId}:${kind}`, 0, item.count);
 }

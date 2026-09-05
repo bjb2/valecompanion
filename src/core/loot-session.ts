@@ -1,5 +1,6 @@
 import type { AlertHistoryView, LootItemView, LootMatchView } from "../shared/contracts.ts";
-import { artifactFacts, cardFacts, equipmentFacts, gemFacts } from "./catalog.ts";
+import { artifactFacts, cosmeticFacts, equipmentFacts, gemFacts, stackFacts, type Facts } from "./catalog.ts";
+import { STACK_KINDS } from "../shared/loot-kinds.ts";
 import { matchLoot, type LootContext, type LootMatch } from "./filter/loot-filter.ts";
 import { parseLootFilter, type ParsedFilter } from "./filter/loot-dsl.ts";
 import type { OwnedGear } from "./filter/types.ts";
@@ -81,21 +82,13 @@ export class LootSession {
   consumeInventory(inventory: SaviInventory, partial = false): SnapshotResult {
     const threshold = this.#parsed.threshold ?? 90;
     const next = new Map<string, Entry>();
-    for (const item of inventory.equips) {
-      const fact = equipmentFacts(item, threshold);
-      next.set(fact.view.uid, { owned: fact, view: fact.view });
-    }
-    for (const item of inventory.artifacts) {
-      const fact = artifactFacts(item, threshold);
-      next.set(fact.view.uid, { owned: fact, view: fact.view });
-    }
-    for (const item of inventory.cards) {
-      const fact = cardFacts(item);
-      next.set(fact.view.uid, { owned: fact, view: fact.view });
-    }
-    for (const item of inventory.gems) {
-      const fact = gemFacts(item);
-      next.set(fact.view.uid, { owned: fact, view: fact.view });
+    const add = (fact: Facts) => next.set(fact.view.uid, { owned: fact, view: fact.view });
+    for (const item of inventory.equips) add(equipmentFacts(item, threshold));
+    for (const item of inventory.artifacts) add(artifactFacts(item, threshold));
+    for (const item of inventory.gems) add(gemFacts(item));
+    for (const item of inventory.cosmetics) add(cosmeticFacts(item));
+    for (const [kind, bucket] of STACK_KINDS) {
+      for (const item of inventory[bucket]) add(stackFacts(item, kind));
     }
 
     const baseline = !this.#baseline;

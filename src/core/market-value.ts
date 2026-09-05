@@ -1,4 +1,5 @@
 import type { LootItemView, MarketValueTier, MarketValueView } from "../shared/contracts.ts";
+import { LOOT_KINDS } from "../shared/loot-kinds.ts";
 import { ARTIFACT_SLOT_NAMES } from "./types.ts";
 
 export interface MarketListing {
@@ -17,7 +18,8 @@ const ARTIFACT_SLOT_IDS: Record<string, number> = Object.fromEntries(
 // value is at least the owned roll. Looser tiers fall back to the same lines, then any roll.
 export function priceItem(item: LootItemView, listings: MarketListing[]): MarketValueView | null {
   if (listings.length === 0) return null;
-  if (item.kind === "card" || item.kind === "gem") return unitValue(item, listings);
+  // Fungible kinds have no roll to compare, so a listing prices one unit of the stack.
+  if (LOOT_KINDS[item.kind].fungible) return unitValue(item, listings);
   const slot = item.kind === "artifact" ? ARTIFACT_SLOT_IDS[item.type] ?? null : null;
   const pool = slot === null ? listings : listings.filter((listing) => listing.artifactSlot === slot);
   if (pool.length === 0) return null;

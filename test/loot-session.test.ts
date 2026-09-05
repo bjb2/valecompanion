@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { artifactFacts, equipmentFacts } from "../src/core/catalog.ts";
 import { LootSession } from "../src/core/loot-session.ts";
-import type { SaviArtifact, SaviEquip, SaviGem, SaviSnapshot, SaviStack, SaviSubstat } from "../src/core/types.ts";
+import type { SaviArtifact, SaviCosmetic, SaviEquip, SaviGem, SaviInventory, SaviSnapshot, SaviStack, SaviSubstat } from "../src/core/types.ts";
 
 function equipment(uid: string, substats: Array<SaviSubstat | null> = []): SaviEquip {
   return {
@@ -18,6 +18,10 @@ function equipment(uid: string, substats: Array<SaviSubstat | null> = []): SaviE
   };
 }
 
+function grimoire(uid: string): SaviEquip {
+  return { ...equipment(uid), itemId: "Acolyte_3" };
+}
+
 function gem(uid: string): SaviGem {
   return {
     uid,
@@ -27,11 +31,11 @@ function gem(uid: string): SaviGem {
   };
 }
 
-function card(count: number): SaviStack {
-  return { itemId: "Abomination", count, favorite: false };
+function stack(itemId: string, count = 1): SaviStack {
+  return { itemId, count, favorite: false };
 }
 
-function snapshot(items: SaviEquip[], partial = false, gems: SaviGem[] = [], cards: SaviStack[] = []): SaviSnapshot {
+function snapshot(inventory: Partial<SaviInventory> = {}, partial = false): SaviSnapshot {
   return {
     schema: 1,
     updateType: 0,
@@ -54,31 +58,27 @@ function snapshot(items: SaviEquip[], partial = false, gems: SaviGem[] = [], car
     capturedAt: "",
     partial,
     inventory: {
-      equips: items,
-      artifacts: [],
-      cards,
-      gems,
-      junks: [],
-      consumables: [],
+      equips: [], artifacts: [], cards: [], gems: [], junks: [], consumables: [], cosmetics: [],
+      ...inventory,
     },
   };
 }
 
 test("decoded inventory remains authoritative when the later character tail is partial", () => {
   const session = new LootSession();
-  session.consume(snapshot([equipment("a")]));
-  expect(session.consume(snapshot([equipment("a"), equipment("b")])).added.map((item) => item.uid)).toEqual(["b"]);
-  session.consume(snapshot([equipment("b")]));
-  expect(session.consume(snapshot([equipment("b"), equipment("a")])).added.map((item) => item.uid)).toEqual(["a"]);
-  session.consume(snapshot([equipment("a")], true));
+  session.consume(snapshot({ equips: [equipment("a")] }));
+  expect(session.consume(snapshot({ equips: [equipment("a"), equipment("b")] })).added.map((item) => item.uid)).toEqual(["b"]);
+  session.consume(snapshot({ equips: [equipment("b")] }));
+  expect(session.consume(snapshot({ equips: [equipment("b"), equipment("a")] })).added.map((item) => item.uid)).toEqual(["a"]);
+  session.consume(snapshot({ equips: [equipment("a")] }, true));
   expect(session.bag().map((item) => item.uid)).toEqual(["a"]);
 });
 
 test("gems enter the bag and match Gem rules", () => {
   const session = new LootSession();
   session.setFilter('Show "gems"\n  Type Gem\n  Tag GEM');
-  session.consume(snapshot([]));
-  const result = session.consume(snapshot([], false, [gem("gem-1")]));
+  session.consume(snapshot());
+  const result = session.consume(snapshot({ gems: [gem("gem-1")] }));
 
   expect(result.added).toHaveLength(1);
   expect(result.added[0]).toMatchObject({
@@ -96,9 +96,9 @@ test("gems enter the bag and match Gem rules", () => {
 test("cards enter the bag and repeated stack increases trigger additions", () => {
   const session = new LootSession();
   session.setFilter('Show "cards"\n  Type Card\n  Tag CARD');
-  session.consume(snapshot([]));
+  session.consume(snapshot());
 
-  const first = session.consume(snapshot([], false, [], [card(1)]));
+  const first = session.consume(snapshot({ cards: [stack("Abomination", 1)] }));
   expect(first.added).toHaveLength(1);
   expect(first.added[0]).toMatchObject({
     uid: "Abomination:card",
@@ -110,8 +110,8 @@ test("cards enter the bag and repeated stack increases trigger additions", () =>
     match: { tag: "CARD" },
   });
 
-  expect(session.consume(snapshot([], false, [], [card(2)])).added).toHaveLength(1);
-  expect(session.consume(snapshot([], false, [], [card(2)])).added).toHaveLength(0);
+  expect(session.consume(snapshot({ cards: [stack("Abomination", 2)] })).added).toHaveLength(1);
+  expect(session.consume(snapshot({ cards: [stack("Abomination", 2)] })).added).toHaveLength(0);
   expect(session.bag()[0]?.count).toBe(2);
 });
 
@@ -161,7 +161,7 @@ test("artifact facts resolve the concrete slot piece", () => {
 test("changing the filter threshold recalculates current high-roll counts", () => {
   const session = new LootSession();
   session.setFilter("Threshold 90");
-  session.consume(snapshot([equipment("a", [{ index: 0, type: 2, roll: 92, valueStr: null }])]));
+  session.consume(snapshot({ equips: [equipment("a", [{ index: 0, type: 2, roll: 92, valueStr: null }])] }));
   expect(session.bag()[0]?.highRolls).toBe(1);
   session.setFilter("Threshold 95");
   expect(session.bag()[0]?.highRolls).toBe(0);
@@ -169,7 +169,7 @@ test("changing the filter threshold recalculates current high-roll counts", () =
 
 test("high-roll metrics do not imply an active filter rule", () => {
   const session = new LootSession();
-  session.consume(snapshot([equipment("high", [{ index: 0, type: 2, roll: 100, valueStr: null }])]));
+  session.consume(snapshot({ equips: [equipment("high", [{ index: 0, type: 2, roll: 100, valueStr: null }])] }));
   expect(session.filter.rules).toEqual([]);
   expect(session.bag()[0]?.highRolls).toBe(1);
   expect(session.bag()[0]?.match).toBeNull();
@@ -179,8 +179,8 @@ test("hidden matches never project, play, or enter history", () => {
   const played: string[] = [];
   const session = new LootSession({ soundsEnabled: () => true, onSound: (sound) => { played.push(sound); return true; } });
   session.setFilter('AlwaysHide "Abyss Shard"');
-  session.consume(snapshot([]));
-  const result = session.consume(snapshot([equipment("hidden")]));
+  session.consume(snapshot());
+  const result = session.consume(snapshot({ equips: [equipment("hidden")] }));
   expect(result.added[0]?.match).toBeNull();
   expect(session.bag()[0]?.match).toBeNull();
   expect(session.history()).toEqual([]);
@@ -191,8 +191,8 @@ test("one snapshot awards sound priority once and records every visible match", 
   const played: string[] = [];
   const session = new LootSession({ soundsEnabled: () => true, onSound: (sound) => { played.push(sound); return true; } });
   session.setFilter('Show "shards"\n  Name "Abyss Shard"\n  Sound chime');
-  session.consume(snapshot([]));
-  session.consume(snapshot([equipment("first"), equipment("second")]));
+  session.consume(snapshot());
+  session.consume(snapshot({ equips: [equipment("first"), equipment("second")] }));
   expect(played).toEqual(["chime"]);
   expect(session.history()).toHaveLength(2);
   expect(session.history().filter((entry) => entry.soundWinner)).toHaveLength(1);
@@ -208,8 +208,8 @@ test("async sound dispatch updates history only after confirmation", async () =>
     onSound: () => new Promise<boolean>((resolve) => { confirm = resolve; }),
   });
   session.setFilter('Show "shards"\n  Name "Abyss Shard"\n  Sound chime');
-  session.consume(snapshot([]));
-  session.consume(snapshot([equipment("confirmed")]));
+  session.consume(snapshot());
+  session.consume(snapshot({ equips: [equipment("confirmed")] }));
   expect(session.history()[0]?.soundPlayed).toBe(false);
   confirm(true);
   await Promise.resolve();
@@ -221,9 +221,87 @@ test("async sound dispatch updates history only after confirmation", async () =>
     onSound: () => Promise.reject(new Error("transport failed")),
   });
   rejected.setFilter('Show "shards"\n  Name "Abyss Shard"\n  Sound chime');
-  rejected.consume(snapshot([]));
-  rejected.consume(snapshot([equipment("rejected")]));
+  rejected.consume(snapshot());
+  rejected.consume(snapshot({ equips: [equipment("rejected")] }));
   await Promise.resolve();
   expect(rejected.history()[0]?.soundPlayed).toBe(false);
   expect(rejected.history()[0]?.note).toBe("sound unavailable or disabled");
+});
+
+test("consumables and materials enter the bag under their own kinds", () => {
+  const session = new LootSession();
+  session.setFilter('Show "supplies"\n  Type Consumable\n  Tag USE');
+  session.consume(snapshot());
+  const result = session.consume(snapshot({ junks: [stack("Ash", 12)], consumables: [stack("Artifact Box Base", 3)] }));
+
+  expect(result.added.map((item) => item.uid).sort()).toEqual(["Artifact Box Base:consumable", "Ash:material"]);
+  expect(result.added.find((item) => item.kind === "consumable")).toMatchObject({
+    itemId: "Artifact Box Base",
+    name: "Box of Origins",
+    type: "Consumable",
+    kind: "consumable",
+    count: 3,
+    icon: "security_box.webp",
+  });
+  expect(result.added.find((item) => item.kind === "material")).toMatchObject({
+    itemId: "Ash",
+    name: "Ash",
+    type: "Material",
+    kind: "material",
+    count: 12,
+  });
+  expect(result.added.find((item) => item.kind === "consumable")?.match?.tag).toBe("USE");
+  expect(result.added.find((item) => item.kind === "material")?.match).toBeNull();
+});
+
+test("a growing consumable stack is reported as an addition", () => {
+  const session = new LootSession();
+  session.consume(snapshot({ consumables: [stack("Artifact Box Base", 1)] }));
+  const grown = session.consume(snapshot({ consumables: [stack("Artifact Box Base", 4)] }));
+  expect(grown.added.map((item) => item.count)).toEqual([4]);
+  const same = session.consume(snapshot({ consumables: [stack("Artifact Box Base", 4)] }));
+  expect(same.added).toHaveLength(0);
+});
+
+test("cosmetics enter the bag and keep their own kind", () => {
+  const session = new LootSession();
+  session.consume(snapshot());
+  const result = session.consume(snapshot({ cosmetics: [
+    { uid: "c1", itemId: "Back_CrystalWings", refine: 1, rarity: 3, shiny: true, favorite: false },
+  ] }));
+
+  expect(result.added).toHaveLength(1);
+  expect(result.added[0]).toMatchObject({
+    uid: "c1",
+    itemId: "Back_CrystalWings",
+    name: "Crystal Wings",
+    type: "Cosmetic",
+    kind: "cosmetic",
+    refine: 1,
+    count: 1,
+  });
+});
+
+test("names the ids the local catalog does not carry", () => {
+  const session = new LootSession();
+  session.consume(snapshot());
+  const result = session.consume(snapshot({
+    junks: [stack("Acorn", 5)],
+    cosmetics: [{ uid: "aura", itemId: "Aura_Angel", refine: 0, rarity: 2, shiny: false, favorite: false }],
+  }));
+
+  // The bundled FishNet directory covers materials and cosmetics that assets/catalog.json omits,
+  // so they read as real items instead of raw wire ids tagged NEW?.
+  expect(result.added.map((item) => item.name).sort()).toEqual(["Acorn", "Angelic Aura"]);
+  expect(result.added.every((item) => item.match?.tag !== "NEW?")).toBe(true);
+});
+
+test("a grimoire is grouped apart from other equipment", () => {
+  const session = new LootSession();
+  session.consume(snapshot());
+  const result = session.consume(snapshot({ equips: [equipment("g1"), grimoire("g2")] }));
+
+  const kinds = Object.fromEntries(result.added.map((item) => [item.uid, item.kind]));
+  expect(kinds).toEqual({ g1: "equipment", g2: "grimoire" });
+  expect(result.added.find((item) => item.uid === "g2")).toMatchObject({ type: "Grimoire", name: "Radiant Judgment" });
 });

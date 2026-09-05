@@ -86,3 +86,14 @@ describe("priceBag", () => {
     expect(priced[1]?.value).toBeUndefined();
   });
 });
+
+describe("fungible kinds", () => {
+  test("consumables and materials price by the unit ask times the stack", () => {
+    const stack = { itemId: "Ash", name: "Ash", type: "Material", kind: "material" as const, count: 10, lines: [] };
+    const listings = [listing(20, [], { itemId: "Ash" }), listing(60, [], { itemId: "Ash" }), listing(100, [], { itemId: "Ash" })];
+    expect(priceItem(item(stack), listings)).toEqual({ low: 200, median: 600, tier: "unit", listings: 3 });
+
+    const box = { itemId: "Artifact Box Base", name: "Box of Origins", type: "Consumable", kind: "consumable" as const, count: 2, lines: [] };
+    expect(priceItem(item(box), [listing(500, [], { itemId: "Artifact Box Base" })])).toEqual({ low: 1_000, median: 1_000, tier: "unit", listings: 1 });
+  });
+});

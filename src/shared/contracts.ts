@@ -1,5 +1,7 @@
 export type CollectorPhase = "disabled" | "capture-unavailable" | "waiting-for-game" | "capturing" | "error";
-export type LootKind = "equipment" | "artifact" | "gem" | "card";
+import type { LootKind } from "./loot-kinds.ts";
+
+export type { LootKind };
 export type LootHighlight = "dot" | "mark" | "glow";
 export type LootBackground = "border" | "fill" | "holo";
 

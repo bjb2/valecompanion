@@ -20,7 +20,7 @@
 
 import { Reader } from './wire.ts';
 import type {
-  SaviArtifact, SaviEquip, SaviGem, SaviInventory, SaviSkill, SaviSnapshot, SaviStack, SaviSubstat,
+  SaviArtifact, SaviCosmetic, SaviEquip, SaviGem, SaviInventory, SaviSkill, SaviSnapshot, SaviStack, SaviSubstat,
 } from './types.ts';
 
 /** `CharacterCallback_T` update mask meaning "the whole character" (all bits the client sets). */
@@ -330,9 +330,15 @@ function readStack(r: Reader): SaviStack | undefined {
 }
 
 /** CosmeticData { Rarity, Shiny } : RefinableItemData : InventoryItemData. */
-function skipCosmetic(r: Reader): void {
-  if (!r.objectRef()) return;
-  r.packed(); r.bool(); r.string(UID_MAX); r.packed(); r.string(ID_MAX); r.bool();
+function readCosmetic(r: Reader): SaviCosmetic | undefined {
+  if (!r.objectRef()) return undefined;
+  const rarity = r.packed();
+  const shiny = r.bool();
+  const uid = r.string(UID_MAX);
+  const refine = r.packed();
+  const itemId = r.string(ID_MAX);
+  const favorite = r.bool();
+  return itemId ? { uid, itemId, refine, rarity, shiny, favorite } : undefined;
 }
 
 /** SkillSystemData { Skills, Assigned, SkillCopy, Reanimations }. */
@@ -373,6 +379,6 @@ function readInventory(r: Reader): SaviInventory | undefined {
   const gems = r.dict(() => readGem(r)).filter(isPresent);
   const junks = r.dict(() => readStack(r)).filter(isPresent);
   const consumables = r.dict(() => readStack(r)).filter(isPresent);
-  r.dict(() => skipCosmetic(r));
-  return { equips, artifacts, cards, gems, junks, consumables };
+  const cosmetics = r.dict(() => readCosmetic(r)).filter(isPresent);
+  return { equips, artifacts, cards, gems, junks, consumables, cosmetics };
 }
