@@ -1,7 +1,8 @@
 # Incremental market sync (issue #6)
 
-Status: implemented for local validation; not deployed or released. The matching
-Worker changes are in the sibling `valemarket/server` source. That server directory
+Status: Worker deployed to production on 2026-09-05; desktop change remains a draft
+and has not been released. The matching Worker changes are in the sibling
+`valemarket/server` source. That server directory
 was already untracked in its parent repository; do not mistake a companion commit
 for a published or versioned API deployment.
 
@@ -78,18 +79,19 @@ A synthetic test with 10,000 listings, 1% replacements and 1% removals measured
 uncompressed; the outer chain envelope adds a small amount). This is a controlled
 bandwidth example, not a measurement of production CPU, billing, or actual churn.
 
-Before releasing:
+The owner approved direct production deployment with rollback available instead
+of an isolated staging rollout. See `market-sync-deployment.md` for the deployed
+version, checks, and rollback command. Before releasing the companion:
 
 1. Review and version the API changes alongside the companion change.
-2. Validate an isolated staging deployment at representative listing counts and
-   churn. Record Worker CPU, R2 operations, response bytes, cache hits/misses, and
-   requests per client-hour as simulated client counts increase. Verify D1 reads
-   occur during publication only. Do not load-test production for these numbers.
+2. Verify scheduled publication and incremental responses with a few real-client
+   requests. Observe available Worker CPU, R2, and error metrics without running a
+   production load test. The synthetic benchmark is not a production cost estimate.
 3. Exercise publication failures, missed polls, removals, and full recovery.
 4. Deploy the backward-compatible API first and allow a scheduled publication.
    Verify old full-snapshot clients still work and new clients acquire revisions.
-5. Release the companion only after validation. No version tag, release, or
-   production deployment is part of this implementation change.
+5. Release the companion only after validation. No desktop version tag or release
+   has been created.
 
 References: [R2 Workers API](https://developers.cloudflare.com/r2/api/workers/workers-api-reference/),
 [Workers best practices](https://developers.cloudflare.com/workers/best-practices/workers-best-practices/).
