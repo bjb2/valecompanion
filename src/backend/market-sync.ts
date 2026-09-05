@@ -31,7 +31,7 @@ export function applySnapshotDelta(base: Record<string, unknown>, payload: unkno
   const from = snapshotRevision(base);
   if (!from || !Array.isArray(base.listings) || !isRecord(payload) || payload.marketId !== "global"
     || payload.fromRevision !== from || !snapshotRevision(payload) || !Array.isArray(payload.deltas)
-    || payload.deltas.length === 0 || payload.deltas.length > 8
+    || payload.deltas.length === 0 || payload.deltas.length > 12
     || typeof payload.generatedAt !== "string" || !Number.isFinite(Date.parse(payload.generatedAt))
     || Date.parse(payload.generatedAt) < Date.parse(String(base.generatedAt))) throw new Error("invalid snapshot delta base");
   const listings = new Map(base.listings.map((listing) => [listingKey(listing), listing]));

@@ -5,8 +5,14 @@ import { MARKET_API_URL } from "./market-contracts.ts";
 import { errorLogFields, type AppLogger } from "./market-logger.ts";
 import { errorMessage, isRecord, loadJson, writeJsonAtomic } from "./market-storage.ts";
 
-const REFRESH_INTERVAL_MS = 15 * 60 * 1_000;
+const REFRESH_INTERVAL_MS = 10 * 60 * 1_000;
 const RETRY_INTERVAL_MS = 2 * 60 * 1_000;
+
+// Allow publication to finish, then spread clients across a 30-second window.
+export function nextMarketCheckAt(fetchedAt: number, staggerMs = 0): number {
+  const offset = 60_000 + staggerMs;
+  return (Math.floor((fetchedAt - offset) / REFRESH_INTERVAL_MS) + 1) * REFRESH_INTERVAL_MS + offset;
+}
 
 interface SnapshotState {
   fetchedAt: number;
@@ -22,10 +28,11 @@ export interface MarketSnapshotOptions {
   fetch?: (url: string, init?: RequestInit) => Promise<Response>;
   now?: () => Date;
   logger?: AppLogger;
+  staggerMs?: number;
 }
 
 // The one place the collector and the Market frame get the public ValeMarket snapshot from.
-// Serves the cached body while it is under 15 minutes old, refreshes otherwise with concurrent
+// Checks shortly after ten-minute publication boundaries, with concurrent
 // callers sharing a single download, and keeps stale data across failures so bag pricing
 // degrades to old numbers rather than none. The cache stores the API body untouched.
 export class MarketSnapshot {
@@ -37,6 +44,7 @@ export class MarketSnapshot {
   private readonly lifetime = new AbortController();
   private fetchWarning: string | undefined;
   private cacheWarning: string | undefined;
+  private readonly staggerMs: number;
   private readonly endpoint: string;
   private readonly fetch: NonNullable<MarketSnapshotOptions["fetch"]>;
   private readonly now: () => Date;
@@ -45,6 +53,7 @@ export class MarketSnapshot {
     this.endpoint = (options.endpoint ?? MARKET_API_URL).replace(/\/$/, "");
     this.fetch = options.fetch ?? globalThis.fetch;
     this.now = options.now ?? (() => new Date());
+    this.staggerMs = options.staggerMs ?? Math.floor(Math.random() * 30_000);
     this.index();
   }
 
@@ -71,8 +80,8 @@ export class MarketSnapshot {
 
   // The API body as last downloaded, refreshed first when it is due. Null only when nothing
   // has ever been fetched and the download fails.
-  async body(): Promise<Record<string, unknown> | null> {
-    await this.ensureFresh();
+  async body(refresh = false): Promise<Record<string, unknown> | null> {
+    await (refresh ? this.refresh() : this.ensureFresh());
     return this.state?.body ?? null;
   }
 
@@ -98,7 +107,7 @@ export class MarketSnapshot {
   }
 
   private dueIn(): number {
-    return this.state ? Math.max(0, REFRESH_INTERVAL_MS - (this.now().getTime() - this.state.fetchedAt)) : 0;
+    return this.state ? Math.max(0, nextMarketCheckAt(this.state.fetchedAt, this.staggerMs) - this.now().getTime()) : 0;
   }
 
   private async download(): Promise<boolean> {
@@ -109,8 +118,10 @@ export class MarketSnapshot {
     try {
       const route = revision ? `changes?since=${encodeURIComponent(revision)}` : "snapshot";
       const response = await this.fetch(`${this.endpoint}/v2/markets/global/${route}`, {
-        ...(etag ? { headers: { "If-None-Match": etag } } : {}),
-        redirect: "error",
+        headers: { "Cache-Control": "no-cache", ...(etag ? { "If-None-Match": etag } : {}) },
+        // Bun treats 304 as a redirect with "error". Manual still refuses to
+        // follow redirects, while allowing unchanged responses through.
+        redirect: "manual",
         signal: AbortSignal.any([this.lifetime.signal, AbortSignal.timeout(20_000)]),
       });
       if (!response.ok && response.status !== 304) {
@@ -175,7 +186,7 @@ export class MarketSnapshot {
     if (this.lifetime.signal.aborted) return;
     this.refreshTimer = setTimeout(() => {
       void this.ensureFresh().then((ok) => this.schedule(ok ? Math.max(this.dueIn(), RETRY_INTERVAL_MS) : RETRY_INTERVAL_MS));
-    }, delayMs + Math.floor(Math.random() * 30_000));
+    }, delayMs);
   }
 
   private index(): void {

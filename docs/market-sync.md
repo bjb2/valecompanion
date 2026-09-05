@@ -33,7 +33,7 @@ previous complete on-disk revision.
 
 ## Cloudflare work
 
-The existing 15-minute publisher reads D1 once per publication, using listing-key
+The 10-minute publisher reads D1 once per publication, using listing-key
 pagination, and stages bounded pages in R2. It streams a merge of the previous and
 current pages into an immutable delta object. It does not materialize two complete
 market snapshots in memory. All public field changes, including observation
@@ -42,8 +42,8 @@ an explicit removal, including expiry and eligibility changes.
 
 The manifest is published only after its snapshot and delta objects exist, using
 conditional R2 publication to prevent competing publishers from overwriting each
-other. The current snapshot pages and eight delta transitions are retained; old
-pages, superseded snapshots, and deltas beyond the window are deleted. Eight
+other. The current snapshot pages and twelve delta transitions are retained; old
+pages, superseded snapshots, and deltas beyond the window are deleted. Twelve
 transitions normally cover two hours, not a guaranteed wall-clock retention period.
 
 Normal sync requests perform no D1 queries and no diff computation:
@@ -52,7 +52,7 @@ Normal sync requests perform no D1 queries and no diff computation:
 | --- | --- |
 | Already current | Rate-limit check, one small R2 manifest read, empty 304 |
 | Behind, cached chain | Manifest read, Cache API lookup, cached response |
-| Behind, uncached chain | Manifest read, up to eight streamed R2 delta reads, Cache API population |
+| Behind, uncached chain | Manifest read, up to twelve streamed R2 delta reads, Cache API population |
 | Unknown/expired revision or oversized chain | Manifest read, then cached or streamed full snapshot response |
 | No published artifact | 503 with Retry-After; generation stays on the scheduled path |
 
@@ -64,9 +64,15 @@ storage in exchange for smaller client responses. Chains whose stored sizes plus
 an envelope allowance reach the full snapshot size use the full response instead.
 
 The companion has one snapshot coordinator for Loot and Market, a normal
-15-minute freshness interval, and up to 30 seconds of timer jitter. In-flight
+check 60-90 seconds after each ten-minute publication boundary. Manual Refresh
+checks immediately, including when the local cache is fresh, while respecting
+shared retry backoff and in-flight requests. In-flight
 requests are shared. Fingerprints have an independent 30-minute cache/ETag check,
-so the Market view's 15-minute refresh does not double fingerprint API calls.
+so Market refreshes do not double fingerprint API calls. The visible Market view
+reloads the shared local snapshot 95 seconds after each publication boundary.
+Public snapshot/change URLs must revalidate; their revision-keyed Cache API
+entries retain a one-day TTL. Publication frequency increases from four to six
+runs per hour (50% more scheduled publication work).
 
 ## Validation and release gate
 

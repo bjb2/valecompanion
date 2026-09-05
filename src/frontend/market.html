@@ -1917,9 +1917,9 @@ window.addEventListener("popstate", () => {
 
 
 
-async function fetchAllListings() {
+async function fetchAllListings(refresh = false) {
   // The desktop collector owns the snapshot download and cache; the frame reads its copy.
-  const response = await fetch(`${DESKTOP_API}/v1/market/snapshot`, { cache: "no-store" });
+  const response = await fetch(`${DESKTOP_API}/v1/market/snapshot${refresh ? "?refresh=1" : ""}`, { cache: "no-store" });
   if (!response.ok) throw new Error(`market snapshot ${response.status}`);
   const body = await response.json();
   if (body?.marketId !== "global" || !Array.isArray(body.listings)
@@ -1997,7 +1997,7 @@ function publicVariant(row) {
 
 let marketLoading = false;
 
-async function load() {
+async function load(refreshSnapshot = false) {
   if (marketLoading) return;
   marketLoading = true;
   const refresh = $("refresh-data");
@@ -2014,7 +2014,7 @@ async function load() {
         if (!response.ok) throw new Error(`catalog ${response.status}`);
         return response.json();
       }),
-      fetchAllListings(),
+      fetchAllListings(refreshSnapshot),
       fetchStatFingerprints(),
     ]);
     state.catalog = catalog;
@@ -2106,11 +2106,19 @@ async function load() {
   }
 }
 
-const MARKET_REFRESH_MS = 15 * 60 * 1_000;
-$("refresh-data").addEventListener("click", () => void load());
-setInterval(() => {
-  if (!document.hidden) void load();
-}, MARKET_REFRESH_MS);
+const MARKET_REFRESH_MS = 10 * 60 * 1_000;
+$("refresh-data").addEventListener("click", () => void load(true));
+// Repaint after the collector's publication check window (60-90 seconds).
+function scheduleMarketRefresh() {
+  const now = Date.now();
+  const offset = 95_000;
+  const next = (Math.floor((now - offset) / MARKET_REFRESH_MS) + 1) * MARKET_REFRESH_MS + offset;
+  setTimeout(() => {
+    if (!document.hidden) void load();
+    scheduleMarketRefresh();
+  }, next - now);
+}
+scheduleMarketRefresh();
 document.addEventListener("visibilitychange", () => {
   if (document.hidden || !state.manifest) return;
   if (Date.now() - Date.parse(state.manifest.generatedAt) >= MARKET_REFRESH_MS) void load();

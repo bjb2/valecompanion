@@ -2,9 +2,9 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { MarketSnapshot } from "../src/backend/market-snapshot.ts";
+import { MarketSnapshot, nextMarketCheckAt } from "../src/backend/market-snapshot.ts";
 
-const NOW = Date.parse("2026-09-05T12:00:00.000Z");
+const NOW = Date.parse("2026-09-05T12:02:00.000Z");
 const MIN = 60_000;
 const directories: string[] = [];
 
@@ -44,7 +44,7 @@ describe("MarketSnapshot", () => {
   test("downloads once for concurrent callers, indexes by item, and caches the raw body", async () => {
     const file = await cachePath();
     const { calls, fetch } = api([fresh()]);
-    const snapshot = await MarketSnapshot.load({ cachePath: file, endpoint: "https://market.test", now: () => new Date(NOW), fetch });
+    const snapshot = await MarketSnapshot.load({ staggerMs: 0, cachePath: file, endpoint: "https://market.test", now: () => new Date(NOW), fetch });
     expect(snapshot.view()).toEqual({ generatedAt: null, listings: 0 });
 
     const [first, second] = await Promise.all([snapshot.body(), snapshot.body()]);
@@ -70,18 +70,18 @@ describe("MarketSnapshot", () => {
       listing("Corporeal", 9_000, { enhancements: { refine: 1, artifactSlot: 0 } }),
       listing("Corporeal", 500, { enhancements: { refine: 0, artifactSlot: 1 }, expiresAt: "2026-09-05T12:30:00.000Z" }),
     ])]);
-    const first = await MarketSnapshot.load({ cachePath: file, now: () => new Date(clock), fetch });
+    const first = await MarketSnapshot.load({ staggerMs: 0, cachePath: file, now: () => new Date(clock), fetch });
     await first.body();
     expect(first.listingsFor("Corporeal").map((entry) => [entry.refine, entry.artifactSlot])).toEqual([[1, 0], [0, 1]]);
 
     clock = NOW + 5 * MIN;
-    const reloaded = await MarketSnapshot.load({ cachePath: file, now: () => new Date(clock), fetch });
+    const reloaded = await MarketSnapshot.load({ staggerMs: 0, cachePath: file, now: () => new Date(clock), fetch });
     expect(reloaded.listingsFor("Corporeal").map((entry) => [entry.refine, entry.artifactSlot])).toEqual([[1, 0], [0, 1]]);
     expect(await reloaded.body()).toEqual(await first.body());
     expect(calls).toHaveLength(1);
 
     clock = NOW + 35 * MIN;                                   // past the second listing's expiry
-    const later = await MarketSnapshot.load({ cachePath: file, now: () => new Date(clock), fetch });
+    const later = await MarketSnapshot.load({ staggerMs: 0, cachePath: file, now: () => new Date(clock), fetch });
     expect(later.listingsFor("Corporeal").map((entry) => [entry.refine, entry.artifactSlot])).toEqual([[1, 0]]);
     expect(later.view()).toEqual({ generatedAt: "2026-09-05T11:50:00.000Z", listings: 1 });
   });
@@ -90,7 +90,7 @@ describe("MarketSnapshot", () => {
     const directory = await cachePath();
     await writeFile(directory, "a file where the cache directory should be");
     const { calls, fetch } = api([fresh()]);
-    const snapshot = await MarketSnapshot.load({ cachePath: path.join(directory, "market-snapshot.json"), now: () => new Date(NOW), fetch });
+    const snapshot = await MarketSnapshot.load({ staggerMs: 0, cachePath: path.join(directory, "market-snapshot.json"), now: () => new Date(NOW), fetch });
     expect(await snapshot.refresh()).toBe(true);
     expect(snapshot.listingsFor("Mage Plate")).toHaveLength(1);
     const view = snapshot.view();
@@ -104,7 +104,7 @@ describe("MarketSnapshot", () => {
     const file = await cachePath();
     await writeFile(file, JSON.stringify({ fetchedAt: new Date(NOW - 20 * MIN).toISOString(), body: body("2026-09-05T11:00:00.000Z", [listing("Ghost", 4_000)]) }));
     const { calls, fetch } = api([() => new Response("down", { status: 503 })]);
-    const snapshot = await MarketSnapshot.load({ cachePath: file, now: () => new Date(NOW), fetch });
+    const snapshot = await MarketSnapshot.load({ staggerMs: 0, cachePath: file, now: () => new Date(NOW), fetch });
     expect(await snapshot.body()).toEqual(body("2026-09-05T11:00:00.000Z", [listing("Ghost", 4_000)]));
     expect(calls).toHaveLength(1);
     expect(snapshot.listingsFor("Ghost")).toHaveLength(1);
@@ -128,7 +128,7 @@ describe("MarketSnapshot", () => {
         () => { throw new Error("offline"); },
         fresh(),
       ]);
-      const snapshot = await MarketSnapshot.load({ cachePath: file, now: () => new Date(clock), fetch });
+      const snapshot = await MarketSnapshot.load({ staggerMs: 0, cachePath: file, now: () => new Date(clock), fetch });
       const expected = cached ? stale : null;
 
       expect(await snapshot.body()).toEqual(expected);
@@ -156,7 +156,7 @@ describe("MarketSnapshot", () => {
       expect(snapshot.view().warning).toBeUndefined();
       expect(calls).toHaveLength(3);
 
-      clock += 15 * MIN - 1;
+      clock = nextMarketCheckAt(clock) - 1;
       await snapshot.body();
       expect(calls).toHaveLength(3);
       clock++;
@@ -169,7 +169,7 @@ describe("MarketSnapshot", () => {
     const file = await cachePath();
     await writeFile(file, "{not json");
     const warnings: string[] = [];
-    const snapshot = await MarketSnapshot.load({
+    const snapshot = await MarketSnapshot.load({ staggerMs: 0,
       cachePath: file,
       now: () => new Date(NOW),
       logger: { sessionId: "t", debug() {}, info() {}, warn(event) { warnings.push(event); }, error() {} },
@@ -177,4 +177,48 @@ describe("MarketSnapshot", () => {
     expect(snapshot.view()).toEqual({ generatedAt: null, listings: 0 });
     expect(warnings).toEqual(["state.load.invalid"]);
   });
+});
+
+
+test("checks after the next publication instead of waiting ten minutes from download", () => {
+  const boundary = Date.parse("2026-09-05T12:10:00Z");
+  expect(nextMarketCheckAt(boundary - MIN, 20_000)).toBe(boundary + 80_000);
+  expect(nextMarketCheckAt(boundary + 30_000, 20_000)).toBe(boundary + 80_000);
+  expect(nextMarketCheckAt(boundary + 80_000, 20_000)).toBe(boundary + 10 * MIN + 80_000);
+});
+
+test("manual refresh checks a fresh cache, shares requests, and respects server backoff", async () => {
+  let calls = 0;
+  const snapshot = await MarketSnapshot.load({ cachePath: await cachePath(), now: () => new Date(NOW), fetch: async (_, init) => {
+    calls++;
+    if (calls === 1) return Response.json(body(new Date(NOW).toISOString(), []), { headers: { etag: '"first"' } });
+    expect(new Headers(init?.headers).get("if-none-match")).toBe('"first"');
+    return new Response("limited", { status: 429, headers: { "retry-after": "600" } });
+  } });
+  const initial = await snapshot.body();
+  await snapshot.body();
+  expect(calls).toBe(1);
+  expect(await Promise.all([snapshot.body(true), snapshot.body(true)])).toEqual([initial, initial]);
+  expect(calls).toBe(2);
+  await snapshot.body(true);
+  expect(calls).toBe(2);
+});
+
+
+test("real HTTP 304 is accepted without following redirects in Bun", async () => {
+  let redirect = false;
+  const server = Bun.serve({ hostname: "127.0.0.1", port: 0, fetch(request) {
+    if (redirect) return new Response(null, { status: 302, headers: { location: "/unexpected" } });
+    if (request.headers.has("if-none-match")) return new Response(null, { status: 304 });
+    return Response.json(body(new Date(NOW).toISOString(), []), { headers: { etag: '"same"' } });
+  } });
+  try {
+    const snapshot = await MarketSnapshot.load({ cachePath: await cachePath(), endpoint: server.url.toString() });
+    const initial = await snapshot.body();
+    expect(await snapshot.body(true)).toEqual(initial);
+    expect(snapshot.view().warning).toBeUndefined();
+    redirect = true;
+    expect(await snapshot.body(true)).toEqual(initial);
+    expect(snapshot.view().warning).toContain("HTTP 302");
+  } finally { await server.stop(true); }
 });

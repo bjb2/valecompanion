@@ -669,7 +669,7 @@ async function routeRequest(request: Request): Promise<Response> {
 
   if (method === "GET" && route === "/v1/state") return Response.json(currentState());
   if (method === "GET" && route === "/v1/market/snapshot") {
-    const body = await marketSnapshot.body();
+    const body = await marketSnapshot.body(url.searchParams.get("refresh") === "1");
     return body ? Response.json(body) : errorResponse(marketSnapshot.view().warning ?? "market snapshot unavailable", 503);
   }
   if (method === "POST" && route === "/v1/gold/reset") {
