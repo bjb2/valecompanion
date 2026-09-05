@@ -1931,19 +1931,35 @@ async function fetchAllListings() {
     listing.expiresAt === null || (typeof listing.expiresAt === "string" && Date.parse(listing.expiresAt) > now));
   return { listings, generatedAt: body.generatedAt };
 }
+let fingerprintCache = null;
+let fingerprintEtag = null;
+let fingerprintNextCheck = 0;
 async function fetchStatFingerprints() {
+  if (fingerprintCache && Date.now() - Date.parse(fingerprintCache.generatedAt) > 24 * 60 * 60 * 1_000) {
+    fingerprintCache = null;
+    fingerprintEtag = null;
+  }
+  if (Date.now() < fingerprintNextCheck) return fingerprintCache;
+  fingerprintNextCheck = Date.now() + 2 * 60 * 1_000;
   try {
-    const response = await fetch(`${API}/v2/markets/global/stat-fingerprints`);
-    if (!response.ok) return null;
+    const response = await fetch(`${API}/v2/markets/global/stat-fingerprints`, { headers: fingerprintEtag ? { "If-None-Match": fingerprintEtag } : {} });
+    if (response.status === 304 && fingerprintCache) {
+      fingerprintNextCheck = Date.now() + 30 * 60 * 1_000;
+      return fingerprintCache;
+    }
+    if (!response.ok) return fingerprintCache;
     const body = await response.json();
     const generatedAt = Date.parse(body?.generatedAt);
     if (body?.marketId !== "global" || body.modelVersion !== 1 || !Array.isArray(body.items)
         || !Number.isFinite(generatedAt) || Date.now() - generatedAt > 24 * 60 * 60 * 1_000) {
       return null;
     }
+    fingerprintCache = body;
+    fingerprintEtag = response.headers.get("etag");
+    fingerprintNextCheck = Date.now() + 30 * 60 * 1_000;
     return body;
   } catch {
-    return null;
+    return fingerprintCache;
   }
 }
 

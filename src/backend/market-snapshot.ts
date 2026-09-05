@@ -1,3 +1,4 @@
+import { applySnapshotDelta, snapshotRevision, validateSyncListings } from "./market-sync.ts";
 import type { MarketListing } from "../core/market-value.ts";
 import type { MarketPricesView } from "../shared/contracts.ts";
 import { MARKET_API_URL } from "./market-contracts.ts";
@@ -9,6 +10,7 @@ const RETRY_INTERVAL_MS = 2 * 60 * 1_000;
 
 interface SnapshotState {
   fetchedAt: number;
+  etag?: string;
   generatedAt: string;
   body: Record<string, unknown>;
   listings: MarketListing[];
@@ -31,6 +33,7 @@ export class MarketSnapshot {
   private refreshTimer: ReturnType<typeof setTimeout> | undefined;
   private inflight: Promise<boolean> | undefined;
   private nextRetryAt = 0;
+  private fullResync = false;
   private readonly lifetime = new AbortController();
   private fetchWarning: string | undefined;
   private cacheWarning: string | undefined;
@@ -100,29 +103,66 @@ export class MarketSnapshot {
 
   private async download(): Promise<boolean> {
     let next: SnapshotState;
+    let mode = "full";
+    const revision = !this.fullResync && this.state ? snapshotRevision(this.state.body) : undefined;
+    const etag = !this.fullResync ? this.state?.etag : undefined;
     try {
-      const response = await this.fetch(`${this.endpoint}/v2/markets/global/snapshot`, {
+      const route = revision ? `changes?since=${encodeURIComponent(revision)}` : "snapshot";
+      const response = await this.fetch(`${this.endpoint}/v2/markets/global/${route}`, {
+        ...(etag ? { headers: { "If-None-Match": etag } } : {}),
         redirect: "error",
         signal: AbortSignal.any([this.lifetime.signal, AbortSignal.timeout(20_000)]),
       });
-      if (!response.ok) throw new Error(`market snapshot returned HTTP ${response.status}`);
+      if (!response.ok && response.status !== 304) {
+        const retry = response.headers.get("retry-after");
+        const seconds = retry !== null && /^\d+$/.test(retry) ? Number(retry) * 1_000 : Date.parse(retry ?? "") - this.now().getTime();
+        if (Number.isFinite(seconds)) this.nextRetryAt = this.now().getTime() + Math.max(0, seconds);
+        if (revision && (response.status === 400 || response.status === 404 || response.status === 410)) this.fullResync = true;
+        throw new Error(`market snapshot returned HTTP ${response.status}`);
+      }
       const fetchedAt = this.now().getTime();
-      const parsed = parseBody(await response.json(), fetchedAt);
-      if (!parsed) throw new Error("market snapshot returned an invalid response");
-      next = { fetchedAt, ...parsed };
+      let body: unknown;
+      if (response.status === 304) {
+        if (!this.state || (!revision && !etag)) throw new Error("unexpected unchanged snapshot response");
+        body = this.state.body;
+        mode = "unchanged";
+      } else {
+        try {
+          const payload: unknown = await response.json();
+          if (isRecord(payload) && "deltas" in payload) {
+            if (!this.state) throw new Error("delta without a cached snapshot");
+            body = applySnapshotDelta(this.state.body, payload);
+            mode = "delta";
+          } else body = payload;
+        } catch (error) {
+          if (revision) this.fullResync = true;
+          throw error;
+        }
+      }
+      let parsed: ReturnType<typeof parseBody>;
+      try {
+        parsed = parseBody(body, fetchedAt);
+        if (!parsed) throw new Error("market snapshot returned an invalid response");
+      } catch (error) {
+        if (revision) this.fullResync = true;
+        throw error;
+      }
+      const nextEtag = response.headers.get("etag") ?? (response.status === 304 ? etag : undefined);
+      next = { fetchedAt, ...parsed, ...(nextEtag ? { etag: nextEtag } : {}) };
     } catch (error) {
-      this.nextRetryAt = this.now().getTime() + RETRY_INTERVAL_MS;
+      this.nextRetryAt = Math.max(this.nextRetryAt, this.now().getTime() + RETRY_INTERVAL_MS);
       this.fetchWarning = `Market prices ${this.state ? "may be stale" : "are unavailable"}: ${errorMessage(error)}`;
       this.options.logger?.warn("market_snapshot.refresh_failed", errorLogFields(error));
       return false;
     }
     this.state = next;
     this.nextRetryAt = 0;
+    this.fullResync = false;
     this.fetchWarning = undefined;
     this.index();
-    this.options.logger?.info("market_snapshot.refreshed", { generatedAt: next.generatedAt, listings: next.listings.length });
+    this.options.logger?.info("market_snapshot.refreshed", { generatedAt: next.generatedAt, listings: next.listings.length, mode });
     try {
-      await writeJsonAtomic(this.options.cachePath, { fetchedAt: new Date(next.fetchedAt).toISOString(), body: next.body });
+      await writeJsonAtomic(this.options.cachePath, { fetchedAt: new Date(next.fetchedAt).toISOString(), body: next.body, ...(next.etag ? { etag: next.etag } : {}) });
       this.cacheWarning = undefined;
     } catch (error) {
       this.cacheWarning = `Market snapshot could not be cached: ${errorMessage(error)}`;
@@ -135,7 +175,7 @@ export class MarketSnapshot {
     if (this.lifetime.signal.aborted) return;
     this.refreshTimer = setTimeout(() => {
       void this.ensureFresh().then((ok) => this.schedule(ok ? Math.max(this.dueIn(), RETRY_INTERVAL_MS) : RETRY_INTERVAL_MS));
-    }, delayMs);
+    }, delayMs + Math.floor(Math.random() * 30_000));
   }
 
   private index(): void {
@@ -153,12 +193,16 @@ function parseCache(value: unknown, now: number): SnapshotState | null {
   const fetchedAt = Date.parse(value.fetchedAt);
   if (!Number.isFinite(fetchedAt)) return null;
   const parsed = parseBody(value.body, now);
-  return parsed ? { fetchedAt, ...parsed } : null;
+  return parsed ? { fetchedAt, ...parsed, ...(typeof value.etag === "string" ? { etag: value.etag } : {}) } : null;
 }
 
 function parseBody(value: unknown, now: number): Omit<SnapshotState, "fetchedAt"> | null {
-  if (!isRecord(value) || typeof value.generatedAt !== "string" || !Number.isFinite(Date.parse(value.generatedAt))
+  if (!isRecord(value) || value.marketId !== "global" || typeof value.generatedAt !== "string" || !Number.isFinite(Date.parse(value.generatedAt))
     || !Array.isArray(value.listings)) return null;
+  if (value.revision !== undefined) {
+    if (!snapshotRevision(value)) return null;
+    validateSyncListings(value.listings);
+  }
   const listings: MarketListing[] = [];
   for (const entry of value.listings) {
     const listing = parseListing(entry, now);
