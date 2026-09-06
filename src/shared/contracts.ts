@@ -1,5 +1,5 @@
 export type CollectorPhase = "disabled" | "capture-unavailable" | "waiting-for-game" | "capturing" | "error";
-export type LootKind = "equipment" | "artifact" | "gem" | "card" | "material" | "consumable" | "cosmetic";
+export type LootKind = "equipment" | "grimoire" | "artifact" | "gem" | "card" | "material" | "consumable" | "cosmetic";
 export type LootHighlight = "dot" | "mark" | "glow";
 export type LootBackground = "border" | "fill" | "holo";
 
