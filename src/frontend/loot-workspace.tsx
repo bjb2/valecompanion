@@ -16,7 +16,7 @@ type BagOrder = "name" | "value";
 
 const INVENTORY_CATEGORIES: Array<[LootItemView["kind"], string]> = [
   ["equipment", "Equipment"], ["artifact", "Artifacts"], ["card", "Cards"], ["gem", "Gems"],
-  ["material", "Materials"], ["consumable", "Consumables"], ["cosmetic", "Cosmetics"],
+  ["material", "Materials"], ["consumable", "Consumables"], ["cosmetic", "Cosmetics"], ["grimoire", "Grimoires"],
 ];
 interface InventoryGrouping {
   enabled: boolean;

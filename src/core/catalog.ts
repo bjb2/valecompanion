@@ -155,7 +155,8 @@ function makeFacts(
       itemId: item.itemId,
       name,
       type,
-      kind,
+      // A grimoire is equipment on the wire and its own thing in the bag.
+      kind: exact?.slot === "Grimoire" ? "grimoire" : kind,
       icon: exact?.icon ? path.basename(exact.icon) : null,
       refine: item.refine,
       count: 1,

@@ -227,3 +227,16 @@ test("async sound dispatch updates history only after confirmation", async () =>
   expect(rejected.history()[0]?.soundPlayed).toBe(false);
   expect(rejected.history()[0]?.note).toBe("sound unavailable or disabled");
 });
+
+test("a grimoire is its own kind, not equipment", () => {
+  const session = new LootSession();
+  session.consume(snapshot([]));
+  // Rogue_3 is Venom Bloom: equipment on the wire, Grimoire in the catalog.
+  const grimoire: SaviEquip = { ...equipment("g2"), itemId: "Rogue_3" };
+  const result = session.consume(snapshot([equipment("g1"), grimoire]));
+
+  expect(Object.fromEntries(result.added.map((item) => [item.uid, item.kind])))
+    .toEqual({ g1: "equipment", g2: "grimoire" });
+  expect(result.added.find((item) => item.uid === "g2"))
+    .toMatchObject({ name: "Venom Bloom", type: "Grimoire" });
+});
