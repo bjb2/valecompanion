@@ -45,6 +45,14 @@
  */
 
 import type { OwnedGear, Verdict } from './types.ts';
+
+const ARTIFACT_SLOT_TYPES: readonly string[] = ['Rune', 'Jewel', 'Scroll', 'Relic'];
+
+function matchesSlotType(itemSlotType: string, wantedSlotTypes: readonly string[]): boolean {
+  return wantedSlotTypes.includes(itemSlotType)
+    || (wantedSlotTypes.includes('Artifact') && ARTIFACT_SLOT_TYPES.includes(itemSlotType));
+}
+
 /**
  * Collision-free player-facing names for live SpiritVale stats.
  *
@@ -333,7 +341,8 @@ function matchesStat(item: OwnedGear, condition: StatCondition): boolean {
 }
 
 export function matchesCondition(item: OwnedGear, when: LootCondition, context: LootContext): boolean {
-  if (when.slotTypes?.length && !when.slotTypes.includes(item.slotType)) return false;
+  if (when.slotTypes?.length && !matchesSlotType(item.slotType, when.slotTypes)) return false;
+
   if ((when.minTopRolls !== undefined || when.maxTopRolls !== undefined) && item.topRolls === null) return false;
   if (when.minTopRolls !== undefined && item.topRolls! < when.minTopRolls) return false;
   if (when.maxTopRolls !== undefined && item.topRolls! > when.maxTopRolls) return false;
@@ -489,7 +498,7 @@ export function explainCondition(
 
   if (when.slotTypes?.length) {
     add('type', 'Type', when.slotTypes.join(' or '), item.slotType || 'unknown',
-      when.slotTypes.includes(item.slotType));
+      matchesSlotType(item.slotType, when.slotTypes));
   }
   if (when.names?.length) {
     const actual = item.name || item.itemId || 'unknown';

@@ -90,7 +90,7 @@ Show "Master Sword"
 
 # Each AnyOf is an OR group; separate groups and other lines still use AND.
 Show "artifact primary plus vitality"
-    Type Rune, Jewel, Scroll, Relic
+    Type Artifact
     RequireStat Vit >= 3
     AnyOf
         Stat Str >= 3
@@ -121,7 +121,7 @@ Stat Agi >= 90%     # the line's roll quality: top 10% of its legal range
 | Directive | Valid form | Match |
 | --- | --- | --- |
 | `Name` | `Name Kunai, "Master Sword"` | Case-insensitive substring match. A comma-separated list is ORed, so either name fragment matches. Quote names containing commas; unquoted multi-word fragments are also accepted. |
-| `Type` | `Type Chest, Feet, Shield` | Exact item-type match; the comma-separated alternatives are ORed. Use the catalog's type spelling. |
+| `Type` | `Type Chest, Feet, Shield` | Exact item-type match; the comma-separated alternatives are ORed. `Artifact` is a category alias for Rune, Jewel, Scroll, and Relic; those subtype spellings remain available for narrower rules. |
 | `Stat` | `Stat Agi >= 3` or `Stat Agi >= 90%` | Adds a candidate substat. Without a percent sign it compares the printed value; with `%` it compares that line's roll quality. Listed `Stat` lines require all matches by default. Stat names ignore case; friendly aliases such as `AttackSpeed`, `MagicDamage`, `MovementSpeed`, and `Multistrike` are accepted. |
 | `AllStats` / `AnyStat` | no value | Make the listed `Stat` lines require all (the default) or at least one, respectively. Do not combine either with `StatMatches`. |
 | `StatMatches` | `StatMatches >= 2` | Requires a whole-number count of matching listed `Stat` lines. It replaces `AllStats`/`AnyStat` aggregation and requires at least one `Stat` line in the block. Multiple bounds can define a range. |

@@ -183,6 +183,7 @@ export function LootWorkspace({ state, connectionError, refreshState, onFindInMa
         {actionError && <div class="notice error" role="alert"><span>{actionError}</span><button type="button" onClick={() => setActionError(undefined)} aria-label="Dismiss error">×</button></div>}
         {state?.warning && <div class="notice warning" role="status">{state.warning}</div>}
         {surface === "filters" && <FiltersSurface grouping={grouping} state={state} text={filterText} dirty={filterDirty} scroll={editorScroll} profileName={profileName} selected={selected} busy={busy} onText={(value) => { setFilterText(value); setFilterDirty(true); }} onScroll={setEditorScroll} onSave={() => void saveFilter()} onProfileName={setProfileName} onProfile={profile} onSelect={setSelectedUid} />}
+        {(surface === "bag" || surface === "storage") && <BagSurface grouping={grouping} storage={surface === "storage"} state={state} error={connectionError} query={query} matchesOnly={matchesOnly} items={filteredBag} selected={selected} busy={busy} onQuery={setQuery} onMatchesOnly={setMatchesOnly} order={order} onOrder={setOrder} onSelect={setSelectedUid} onRetry={() => void refreshState()} />}
         {surface === "history" && <HistorySurface history={history} loading={!state && !connectionError} busy={busy} onClear={() => void clearHistory()} onReload={() => void loadHistory()} />}
         {surface !== "history" && selected && <ItemInspector item={selected} onClose={() => setSelectedUid(undefined)} onFindInMarket={onFindInMarket} />}
       </main>

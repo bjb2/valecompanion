@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { artifactFacts, equipmentFacts } from "../src/core/catalog.ts";
+import { explainCondition, matchLoot } from "../src/core/filter/loot-filter.ts";
 import { LootSession } from "../src/core/loot-session.ts";
 import type { SaviArtifact, SaviEquip, SaviGem, SaviSnapshot, SaviStack, SaviSubstat } from "../src/core/types.ts";
 
@@ -222,6 +223,110 @@ test("artifact facts resolve the concrete slot piece", () => {
   expect(facts.view.name).toBe("Blitzcore Jewel");
   expect(facts.view.type).toBe("Jewel");
   expect(facts.view.icon).toBe("artifact-auto-1.webp");
+});
+
+test("artifact category rule matches a three-top primary artifact", () => {
+  const item: SaviArtifact = {
+    slot: 0,
+    uid: "perfect-artifact",
+    itemId: "Corporeal",
+    refine: 0,
+    gems: [],
+    substats: [
+      { index: 0, type: 0, roll: 100, valueStr: null },
+      { index: 1, type: 71, roll: 100, valueStr: null },
+      { index: 2, type: 72, roll: 100, valueStr: null },
+    ],
+    favorite: false,
+  };
+  const session = new LootSession();
+  const parsed = session.setFilter(`Show "Artifact — perfect"
+    Type Artifact
+    TopRolls >= 3
+    AnyOf
+        Stat Str >= 3
+        Stat Vit >= 3
+        Stat Dex >= 3
+        Stat Agi >= 3
+        Stat Int >= 3
+        Stat Luk >= 3
+    Tag ART-P
+    Color #f4d35e
+    Highlight glow
+    Background holo
+    Border off
+    Sound alert`);
+  expect(parsed.errors).toEqual([]);
+  session.consumeInventory({
+    equips: [],
+    artifacts: [item],
+    cards: [],
+    gems: [],
+    junks: [],
+    consumables: [],
+  });
+  expect(session.bag()).toEqual([expect.objectContaining({
+    kind: "artifact",
+    type: "Rune",
+    topRolls: 3,
+    lines: [
+      expect.objectContaining({ stat: "Str", printed: 3 }),
+      expect.objectContaining({ stat: "HpMult", printed: 2 }),
+      expect.objectContaining({ stat: "MpMult", printed: 2 }),
+    ],
+    match: {
+      rule: "Artifact — perfect",
+      tag: "ART-P",
+      color: "#f4d35e",
+      highlight: "glow",
+      background: "holo",
+      border: false,
+      sound: "alert",
+    },
+  })]);
+  const facts = artifactFacts(item);
+  const context = { threshold: 90 };
+  const rule = parsed.rules[0]!;
+  expect(explainCondition(facts, rule.when, context).checks.find((check) => check.key === "type"))
+    .toMatchObject({ actual: "Rune", status: "pass" });
+
+  const runeOnly = new LootSession().setFilter(`Show "Rune only"
+    Type Rune
+    Tag RUNE`).rules[0]!;
+  expect(matchLoot(facts, [runeOnly], context)?.label).toBe("RUNE");
+
+  const equipmentItem = equipment("not-artifact", [
+    { index: 0, type: 0, roll: 100, valueStr: null },
+    { index: 1, type: 4, roll: 100, valueStr: null },
+    { index: 2, type: 12, roll: 100, valueStr: null },
+  ]);
+  equipmentItem.itemId = "Azure Antlers";
+  expect(equipmentFacts(equipmentItem).topRolls).toBe(3);
+  expect(matchLoot(equipmentFacts(equipmentItem), [rule], context)).toBeNull();
+
+  const twoTop = artifactFacts({
+    ...item,
+    uid: "two-top-artifact",
+    substats: [
+      { index: 0, type: 0, roll: 100, valueStr: null },
+      { index: 1, type: 71, roll: 100, valueStr: null },
+      { index: 2, type: 72, roll: 0, valueStr: null },
+    ],
+  });
+  expect(twoTop.topRolls).toBe(2);
+  expect(matchLoot(twoTop, [rule], context)).toBeNull();
+
+  const noPrimary = artifactFacts({
+    ...item,
+    uid: "no-primary-artifact",
+    substats: [
+      { index: 0, type: 69, roll: 100, valueStr: null },
+      { index: 1, type: 71, roll: 100, valueStr: null },
+      { index: 2, type: 72, roll: 100, valueStr: null },
+    ],
+  });
+  expect(noPrimary.topRolls).toBe(3);
+  expect(matchLoot(noPrimary, [rule], context)).toBeNull();
 });
 
 test("changing the filter threshold recalculates current high-roll counts", () => {
