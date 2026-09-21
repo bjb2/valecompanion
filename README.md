@@ -67,26 +67,95 @@ Vale Companion maintains a live view of the character bag from authoritative ser
 - Cards and stack quantities
 - Additions and removals caused by drops, sales, dismantling, and personal-storage transfers
 
-A fresh installation includes a focused starter ruleset in [`docs/starter-ruleset.txt`](docs/starter-ruleset.txt). Rules are evaluated from top to bottom; the first matching rule wins. Rules only change presentation and local alerts.
+A fresh installation includes a focused starter ruleset in [`docs/starter-ruleset.txt`](docs/starter-ruleset.txt). Rules are evaluated from top to bottom: **the first matching rule wins**. A `Show` rule paints the item and can alert; a `Hide` rule claims the item but draws nothing, plays nothing, and produces no loot row. An item that matches no rule remains unpainted and silent. Rules only change presentation and local alerts—they never act on an item.
+
+Printed substat decoding uses the live **0.32.0 Early Access, Steam build 25433400** pool snapshot in [`assets/substat-pools.json`](assets/substat-pools.json): all nine roll pools and the resolved pool for 726 equipment definitions, including explicit item overrides. Eyewear and Back use Headgear; Shield uses Chest; equipment without a special default or override uses Accessory. Scaling follows the client's single-precision arithmetic and rounds ties away from zero. Revalidate this snapshot when game roll pools change. After a decoder update, restart Companion and switch maps in game to capture a fresh inventory; reloading only the window does not restart the collector.
+
+### Writing filters
+
+A rule starts at the left margin with `Show "rule name"` or `Hide "rule name"`. Indent its directives. Ordinary directives in one rule are ANDed: an item must satisfy all of them. A parser error rejects the **entire block**, rather than quietly dropping the bad line and widening the match.
 
 ```text
-Show "high-roll armor"
-  Type Chest, Feet, Head, Legs, Shield
-  HighRolls >= 2
-  Color #35e87a
-  Tag ARMOR
-  Highlight mark
-  Background fill
-  Sound chime
+Threshold 90
 
-Show "cards"
-  Type Card
-  Color #d6ad4a
-  Tag CARD
-  Highlight glow
+# Specific item, printed +3 STR, and a STR roll in the top 10%.
+Show "Master Sword"
+    Name      "Master Sword"
+    Stat      Str >= 3
+    Stat      Str >= 90%
+    Tag       KEEP
+    Color     #35e87a
+    Highlight mark
+    Sound     chime
+
+# Each AnyOf is an OR group; separate groups and other lines still use AND.
+Show "artifact primary plus vitality"
+    Type Rune, Jewel, Scroll, Relic
+    RequireStat Vit >= 3
+    AnyOf
+        Stat Str >= 3
+        Stat Int >= 3
+        Stat Agi >= 3
+    TopRolls >= 2
+
+# Put a deliberate catch-all last. An empty Hide must be named exactly "everything".
+Hide "everything"
 ```
 
-Use the in-app editor to validate rules, manage profiles, choose colors and emphasis, and configure built-in or custom WAV sounds.
+#### Filter-wide lines
+
+| Directive | Valid form and meaning |
+| --- | --- |
+| `Threshold` | `Threshold 1` through `Threshold 100`. Sets the shared raw-roll percentage cutoff used by every `HighRolls` condition; it does not affect `TopRolls`. |
+| `AlwaysShow` / `AlwaysHide` | Accepted top-level comma-separated lists, for example `AlwaysShow "Spirit Ward", "Windborne Rune"`, but **not applied by Vale Companion**: the parser records overrides and no current runtime consumes them. Use `Name` in a `Show` or `Hide` block instead. |
+
+#### Match directives
+
+Use the comparison operators `=`, `>`, `>=`, `<`, and `<=`. Strict comparisons are genuinely exclusive. Counts and displayed roll percentages are integral; use whole numbers for them. For `Stat`, the `%` suffix changes the unit:
+
+```text
+Stat Agi >= 3       # the printed stat value: "+3 AGI"
+Stat Agi >= 90%     # the line's roll quality: top 10% of its legal range
+```
+
+| Directive | Valid form | Match |
+| --- | --- | --- |
+| `Name` | `Name Kunai, "Master Sword"` | Case-insensitive substring match. A comma-separated list is ORed, so either name fragment matches. Quote names containing commas; unquoted multi-word fragments are also accepted. |
+| `Type` | `Type Chest, Feet, Shield` | Exact item-type match; the comma-separated alternatives are ORed. Use the catalog's type spelling. |
+| `Stat` | `Stat Agi >= 3` or `Stat Agi >= 90%` | Adds a candidate substat. Without a percent sign it compares the printed value; with `%` it compares that line's roll quality. Listed `Stat` lines require all matches by default. Stat names ignore case; friendly aliases such as `AttackSpeed`, `MagicDamage`, `MovementSpeed`, and `Multistrike` are accepted. |
+| `AllStats` / `AnyStat` | no value | Make the listed `Stat` lines require all (the default) or at least one, respectively. Do not combine either with `StatMatches`. |
+| `StatMatches` | `StatMatches >= 2` | Requires a whole-number count of matching listed `Stat` lines. It replaces `AllStats`/`AnyStat` aggregation and requires at least one `Stat` line in the block. Multiple bounds can define a range. |
+| `RequireStat` | `RequireStat Vit >= 3` | A stat that must match independently of `StatMatches`, `AnyStat`, and `AllStats`. Multiple `RequireStat` lines all must match. |
+| `AnyOf` | `AnyOf` followed by further-indented `Stat` lines | One or more alternatives: at least one child `Stat` must match. Each `AnyOf` group must match, so two groups express `(A OR B) AND (C OR D)`. |
+| `AvgRollPct` | `AvgRollPct >= 85` | The item's average roll percentage, as the game compares its whole-percent average. `AvgRoll` is accepted as an alias. |
+| `TopRolls` | `TopRolls >= 2` | Number of lines that print their legal maximum value. This is independent of `Threshold`. |
+| `HighRolls` | `HighRolls >= 2` | Number of hidden raw rolls at or above `Threshold`. |
+| `Refine` | `Refine >= 3` | Minimum refinement level. |
+| `SharedStats` | `SharedStats >= 2` | Parsed as a minimum count of item stats also used by worn gear, but the current Companion supplies no worn-gear context, so a rule containing it cannot match. |
+| `Chaos` / `NoChaos` | no value | Restrict to items with, or known not to have, a Chaos effect. |
+| `OverRoll` / `NoOverRoll` | no value | Restrict to items with, or without, a line above its normal maximum. |
+| `Favorite` / `NotFavorite` | no value | Restrict to items marked favourite in game, or not marked favourite. `Favourite` spellings are also accepted. |
+| `Unknown` / `Known` | no value | Restrict to items absent from the catalog, or known to it. |
+| `Verdict` | `Verdict upgrade, better-rolls` | Parsed upgrade-comparison result. Valid values are `upgrade`, `better-rolls`, `sidegrade`, and `worse`; the list is ORed. The current Companion supplies no comparison verdicts, so a rule containing it cannot match. |
+
+#### Display directives for `Show`
+
+| Directive | Valid form | Effect |
+| --- | --- | --- |
+| `Color` | `Color #35e87a` | Six-digit RGB colour for the tag, border, and optional background. (`Colour` is accepted.) |
+| `Tag` | `Tag KEEP` | Short label, limited to 12 characters; the rule name is used when omitted. |
+| `Highlight` | `Highlight dot`, `mark`, or `glow` | Quiet dot, keep mark, or animated/pulsing glow. `dot` is the default. |
+| `Background` | `Background border`, `fill`, or `holo` | Border-only default, solid fill, or hue-rotating fill. |
+| `Border` | `Border on` or `Border off` | Shows or removes the selection frame; it is on by default. |
+| `Sound` | `Sound chime` | Plays once when a matching item arrives, never on every bag rescan. Built-ins are `blip`, `chime`, `ding`, `alert`, and `thud`. For a custom alert, drop a `.wav` file into the custom alert folder in Settings and use its plain filename, with or without `.wav`; names may contain letters, digits, `.`, `-`, or `_`. |
+
+`Hide` accepts the same match directives but cannot use `Highlight`, a non-`border` `Background`, `Border off`, or `Sound`; it is deliberately silent. `Keep` remains an accepted spelling of `Show`, and `Mute` or `Dismantle` of `Hide`, but new filters should use `Show` and `Hide`. `Flash` remains an accepted compatibility spelling of `Highlight glow`; `Protect` is rejected.
+
+Lines beginning with `#` are comments. A `#rrggbb` colour remains a value, and an inline comment after it is valid. Lists are comma-separated; double quotes preserve spaces and allow a rule name, tag, or list entry to be written as one value.
+
+The in-app editor offers context-sensitive completions while typing unfinished names and keywords. Numeric values are suggested only when explicitly requested, and moving the caret does not open suggestions. Press **Ctrl+Space** to request completions; use **Arrow Up/Down** to choose, **Enter** or **Tab** to accept, and **Escape** to dismiss. Clicking a suggestion preserves editor focus and places the caret after the insertion. Accepting a completion only changes the unsaved editor text—select **Save to the game** to parse, persist, and apply the active profile.
+
+Profiles are named saved filter texts. You can create, duplicate, rename, and activate them; profile names must begin with a letter or number and may then contain letters, numbers, spaces, underscores, and hyphens (up to 64 characters). The editor prevents switching profiles while edits are unsaved, so save or discard those edits first. Saving validates the filter, stores it in the active profile, and repaints the observed bag; an invalid filter is not saved.
 
 ## Gold analytics
 

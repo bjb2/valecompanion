@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { resolveFishNetItem } from "@kar-mi/spirit-vale-tools-items";
 import { fishNetMarketStatName } from "@kar-mi/spirit-vale-tools-market";
+import substatPools from "../../assets/substat-pools.json";
 import type { LootItemView, LootLine } from "../shared/contracts.ts";
 import type { OwnedGear, RollLine } from "./filter/types.ts";
 import { ARTIFACT_SLOT_NAMES, type SaviArtifact, type SaviEquip, type SaviGem, type SaviStack, type SaviSubstat } from "./types.ts";
@@ -23,48 +24,15 @@ const catalogPath = existsSync(path.join(import.meta.dir, "catalog.json"))
 const exactCatalog = JSON.parse(readFileSync(catalogPath, "utf8")) as Record<string, CatalogEntry>;
 const cosmeticCatalog = JSON.parse(readFileSync(path.join(path.dirname(catalogPath), "cosmetics.json"), "utf8")) as Record<string, CatalogEntry>;
 const attributeStats: Readonly<Record<string, true>> = { Str: true, Vit: true, Agi: true, Dex: true, Int: true, Luk: true };
-const capGroupBySlot: Readonly<Record<string, string>> = {
-  Accessory: "Accessory",
-  Back: "Accessory",
-  Eyewear: "Accessory",
-  Chest: "Chest",
-  Feet: "Feet",
-  Head: "Headgear",
-  Legs: "Legs",
-  Shield: "Shield",
-  Book: "Magic",
-  Grimoire: "Magic",
-  Wand: "Magic",
-  Bow: "Ranged",
-  GatlingGun: "Ranged",
-  Launcher: "Ranged",
-  Pistol: "Ranged",
-  Rifle: "Ranged",
-  Shotgun: "Ranged",
-  Axe: "Melee",
-  Dagger: "Melee",
-  Katar: "Melee",
-  Mace: "Melee",
-  Scythe: "Melee",
-  Spear: "Melee",
-  Sword: "Melee",
-  Twinblade: "Melee",
-};
-const caps: Readonly<Record<string, Readonly<Record<string, number>>>> = {
-  Accessory: { HpMult: 2, MpMult: 2, AtkMult: 2, MatkMult: 2, Crit: 5, Hit: 10, AtkSpd: 5 },
-  Artifact: { HpMult: 2, MpMult: 2, AtkMult: 2, MatkMult: 2 },
-  Chest: { HpMult: 10, MpMult: 10, Def: 10, Mdef: 10, DefMult: 5, MdefMult: 5, DamageFromMelee: -5, DamageFromMagic: -5, HealingReceived: 10, PerfectDodge: 5 },
-  Feet: { AtkSpd: 10, MoveSpd: 10, CastSpd: 10, AtkSpdLimit: 1 },
-  Headgear: { HpMult: 2, MpMult: 2, AtkMult: 2, MatkMult: 2, Atk: 3, Matk: 3, Def: 5, Mdef: 5 },
-  Legs: { HpRegenMult: 25, MpRegenMult: 25, Leech: 5, CastSpd: 10, Flee: 15, PerfectDodge: 5, MpCost: -10 },
-  Magic: { AtkMult: 5, MatkMult: 5, DamageMelee: 5, DamageMagic: 5, CastSpd: 10, MpCost: -10, AtkSpd: 10, Atk: 5, Matk: 5 },
-  Melee: { AtkMult: 5, MatkMult: 5, DamageMelee: 5, DamageMagic: 5, CastSpd: 10, MpCost: -10, AtkSpd: 10, Atk: 5, Matk: 5 },
-  Ranged: { AtkMult: 5, MatkMult: 5, DamageMelee: 5, DamageMagic: 5, CastSpd: 10, MpCost: -10, AtkSpd: 10, Atk: 5, Matk: 5 },
-  Shield: { HpMult: 10, MpMult: 10, Def: 10, Mdef: 10, DefMult: 5, MdefMult: 5, DamageFromMelee: -5, DamageFromMagic: -5, HealingReceived: 10, PerfectDodge: 5 },
-};
+// Build-scoped game data, including explicit item overrides and compiled defaults.
+// Imported JSON is bundled into the collector; no runtime asset lookup is needed.
+const caps: Readonly<Record<string, Readonly<Record<string, number>>>> = substatPools.caps;
+const equipmentPools: Readonly<Record<string, string>> = substatPools.equipment;
 
 function scaledValue(roll: number, cap: number): number {
-  const value = cap * (2 / 3 + roll / 300);
+  // Match the client's float32 SSE operations before rounding away from zero.
+  const factor = Math.fround(Math.fround(Math.fround(Math.fround(roll) / 100) * Math.fround(1 / 3)) + Math.fround(2 / 3));
+  const value = Math.fround(Math.abs(cap) * factor) * Math.sign(cap);
   return value < 0 ? -Math.round(-value) : Math.round(value);
 }
 
@@ -114,7 +82,7 @@ function makeFacts(
     ? exactCatalog[`${baseExact.name} ${artifactSlot}`] ?? baseExact
     : baseExact;
   const definition = resolveFishNetItem(kind === "equipment" ? 2 : 3, item.itemId);
-  const group = kind === "artifact" ? "Artifact" : definition?.substatGroup ?? (exact?.slot ? capGroupBySlot[exact.slot] : undefined);
+  const group = kind === "artifact" ? "Artifact" : equipmentPools[item.itemId];
   const chaos = kind === "equipment" && (item as SaviEquip).chaosType >= 0;
   const decoded = item.substats
     .filter((value): value is SaviSubstat => value !== null)

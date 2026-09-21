@@ -142,6 +142,72 @@ test("catalog facts apply chest-specific substat caps", () => {
   expect(facts.view.icon).toBe("equip-V2_Chest_17.webp");
 });
 
+test("Azure Antlers printed rolls satisfy specific stat filters", () => {
+  const item = equipment("antlers", [
+    { index: 0, type: 4, roll: 70, valueStr: null },
+    { index: 1, type: 12, roll: 86, valueStr: null },
+    { index: 2, type: 70, roll: 84, valueStr: null },
+  ]);
+  item.itemId = "Azure Antlers";
+  const session = new LootSession();
+  session.setFilter('Show "Azure Antlers"\n    Name "Azure Antlers"\n    Stat Int >= 3\n    Stat Mdef >= 5\n    Stat MatkMult >= 2\n    Tag KEEP');
+  session.consume(snapshot([item]));
+  const antlers = session.bag()[0]!;
+  expect(antlers.lines.map(({ stat, printed }) => [stat, printed])).toEqual([
+    ["Int", 3], ["Mdef", 5], ["MatkMult", 2],
+  ]);
+  expect(antlers.topRolls).toBe(3);
+  expect(antlers.match?.tag).toBe("KEEP");
+});
+
+test("Azure Antlers flat MATK remains distinct from percentage MATK", () => {
+  const item = equipment("flat-antlers", [
+    { index: 0, type: 0, roll: 70, valueStr: null },
+    { index: 1, type: 12, roll: 40, valueStr: null },
+    { index: 2, type: 10, roll: 20, valueStr: null },
+  ]);
+  item.itemId = "Azure Antlers";
+  const session = new LootSession();
+  session.setFilter('Show "percentage only"\n    Stat MatkMult >= 2\n    Tag WRONG\nShow "flat antlers"\n    Name "Azure Antlers"\n    Stat Str >= 3\n    Stat Mdef >= 3\n    Stat Matk >= 2\n    Tag KEEP');
+  session.consume(snapshot([item]));
+  const antlers = session.bag()[0]!;
+  expect(antlers.lines.map(({ stat, printed }) => [stat, printed])).toEqual([
+    ["Str", 3], ["Mdef", 4], ["Matk", 2],
+  ]);
+  expect(antlers.match?.tag).toBe("KEEP");
+});
+
+test.each([
+  ["Adventurer's Kit", 12, 5], // Back uses Headgear, not Accessory.
+  ["Acolyte_1", 70, 2], // A grimoire without an override defaults to Accessory.
+  ["Buckler", 12, 10], // Shield uses Chest.
+  ["EchoBook", 67, 10], // Live explicit Magic override absent from the old dependency.
+  ["Artemis", 25, 1], // Ranged-specific range, absent from the old table.
+  ["Abyss Shard", 80, 20], // Melee-specific multistrike, absent from the old table.
+])("live pool selection decodes %s stat %i", (itemId, type, printed) => {
+  const item = { ...equipment("pool", [{ index: 0, type, roll: 100, valueStr: null }]), itemId };
+  const facts = equipmentFacts(item);
+  expect(facts.view.lines[0]?.printed).toBe(printed);
+  expect(facts.topRolls).toBe(1);
+});
+
+test("client float32 rounding preserves half-step and negative roll values", () => {
+  const legs = equipmentFacts({
+    ...equipment("legs", [
+      { index: 0, type: 14, roll: 90, valueStr: null },
+      { index: 1, type: 75, roll: 34, valueStr: null },
+    ]),
+    itemId: "ArcaneLegs",
+  });
+  expect(legs.view.lines.map((line) => line.printed)).toEqual([15, 20]);
+  expect(legs.topRolls).toBe(1);
+  const shield = equipmentFacts({
+    ...equipment("shield", [{ index: 0, type: 57, roll: 10, valueStr: null }]),
+    itemId: "Buckler",
+  });
+  expect(shield.view.lines[0]?.printed).toBe(-4);
+});
+
 test("artifact facts resolve the concrete slot piece", () => {
   const item: SaviArtifact = {
     slot: 1,

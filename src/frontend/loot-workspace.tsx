@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "preact/hooks";
+import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { JSX } from "preact";
 import {
   type AlertHistoryView,
@@ -9,8 +9,10 @@ import {
 } from "../shared/contracts.ts";
 import { statLabel } from "../shared/stat-labels.ts";
 import { exactMoney, shortMoney } from "./format.ts";
+import { applyCompletion, catalogVocabulary, completionContextAt, editIndent, ruleCompletions, type CompletionContext, type RuleCompletion } from "./rule-autocomplete.ts";
 
 const apiRoot = window.location.origin;
+const NO_SOUNDS: readonly string[] = [];
 type Surface = "bag" | "storage" | "filters" | "history";
 type BagOrder = "name" | "value";
 
@@ -159,8 +161,6 @@ export function LootWorkspace({ state, connectionError, refreshState, onFindInMa
   });
 
 
-  const lineNumbers = filterText.split("\n");
-
   return (
     <div class="loot-module">
       <header class="module-toolbar">
@@ -182,8 +182,7 @@ export function LootWorkspace({ state, connectionError, refreshState, onFindInMa
       <main class="loot-workspace">
         {actionError && <div class="notice error" role="alert"><span>{actionError}</span><button type="button" onClick={() => setActionError(undefined)} aria-label="Dismiss error">×</button></div>}
         {state?.warning && <div class="notice warning" role="status">{state.warning}</div>}
-        {(surface === "bag" || surface === "storage") && <BagSurface grouping={grouping} storage={surface === "storage"} state={state} error={connectionError} query={query} matchesOnly={matchesOnly} items={filteredBag} selected={selected} busy={busy} onQuery={setQuery} onMatchesOnly={setMatchesOnly} order={order} onOrder={setOrder} onSelect={setSelectedUid} onRetry={() => void refreshState()} />}
-        {surface === "filters" && <FiltersSurface grouping={grouping} state={state} text={filterText} dirty={filterDirty} scroll={editorScroll} lineNumbers={lineNumbers} profileName={profileName} selected={selected} busy={busy} onText={(value) => { setFilterText(value); setFilterDirty(true); }} onScroll={setEditorScroll} onSave={() => void saveFilter()} onProfileName={setProfileName} onProfile={profile} onSelect={setSelectedUid} />}
+        {surface === "filters" && <FiltersSurface grouping={grouping} state={state} text={filterText} dirty={filterDirty} scroll={editorScroll} profileName={profileName} selected={selected} busy={busy} onText={(value) => { setFilterText(value); setFilterDirty(true); }} onScroll={setEditorScroll} onSave={() => void saveFilter()} onProfileName={setProfileName} onProfile={profile} onSelect={setSelectedUid} />}
         {surface === "history" && <HistorySurface history={history} loading={!state && !connectionError} busy={busy} onClear={() => void clearHistory()} onReload={() => void loadHistory()} />}
         {surface !== "history" && selected && <ItemInspector item={selected} onClose={() => setSelectedUid(undefined)} onFindInMarket={onFindInMarket} />}
       </main>
@@ -270,8 +269,8 @@ function ItemRow({ item, selected, onSelect }: { item: LootItemView; selected: b
   return <button class={`item-row ${selected ? "selected" : ""} ${treatment}`} style={style} title={name} aria-pressed={selected} type="button" onClick={() => onSelect(item.uid)}>
     <span class="item-cell">{item.icon ? <img class="item-icon" src={iconUrl(item.icon)} alt="" loading="lazy" decoding="async" /> : <span class={`item-sigil ${item.kind}`}>{item.kind.charAt(0).toUpperCase()}</span>}<span><strong>{name}</strong>{item.count > 1 && <small class="item-quantity">{`\u00d7${item.count}`}</small>}</span></span>
     <span class="roll-summary">{bestLines.length ? bestLines.map((line) => <span key={line.stat} title={line.stat}>{statLabel(line.stat)} <b>{formatPct(line.rollPct)}</b></span>) : <em>{item.kind === "card" ? `${item.count} owned` : item.hasChaos ? "Chaos item" : "No high roll"}</em>}</span>
-    <span class="rule-cell">{item.match ? <><i /><span>{item.match.tag || item.match.rule}</span></> : <em>�</em>}</span>
-    <span class="roll-count">{item.topRolls ? `${item.topRolls} top ` : ""}{item.highRolls ? `${item.highRolls} high` : ""}{item.value ? <small class={`value ${approx ? "approx" : ""}`} title={valueDetail(item.value, item.count)}>{approx ? "~" : ""}{shortMoney(item.value.tier === "unit" ? item.value.low / Math.max(1, item.count) : item.value.low)}{item.value.tier === "unit" ? " each" : ""}</small> : <small>{item.avgRollPct === null ? "�" : formatPct(item.avgRollPct)}</small>}</span>
+    <span class="rule-cell">{item.match ? <><i /><span>{item.match.tag || item.match.rule}</span></> : <em>�</em>}</span>
+    <span class="roll-count">{item.topRolls ? `${item.topRolls} top ` : ""}{item.highRolls ? `${item.highRolls} high` : ""}{item.value ? <small class={`value ${approx ? "approx" : ""}`} title={valueDetail(item.value, item.count)}>{approx ? "~" : ""}{shortMoney(item.value.tier === "unit" ? item.value.low / Math.max(1, item.count) : item.value.low)}{item.value.tier === "unit" ? " each" : ""}</small> : <small>{item.avgRollPct === null ? "�" : formatPct(item.avgRollPct)}</small>}</span>
   </button>;
 }
 
@@ -290,8 +289,173 @@ function ItemInspector({ item, onClose, onFindInMarket }: { item: LootItemView; 
   </aside>;
 }
 
-function FiltersSurface({ grouping, state, text, dirty, scroll, lineNumbers, profileName, selected, busy, onText, onScroll, onSave, onProfileName, onProfile, onSelect }: {
-  grouping: InventoryGrouping;   state: DesktopState | undefined; text: string; dirty: boolean; scroll: number; lineNumbers: string[]; profileName: string; selected: LootItemView | undefined; busy: string | undefined; onText(value: string): void; onScroll(value: number): void; onSave(): void; onProfileName(value: string): void; onProfile(command: ProfileCommand): void; onSelect(uid: string): void;
+interface CompletionMenu {
+  readonly context: CompletionContext;
+  readonly entries: readonly RuleCompletion[];
+  readonly selected: number;
+}
+
+function RuleTextEditor({ text, sounds, profileKey, scroll, onText, onScroll }: {
+  text: string; sounds: readonly string[]; profileKey: string; scroll: number; onText(value: string): void; onScroll(value: number): void;
+}) {
+  const editorRef = useRef<HTMLTextAreaElement>(null);
+  const dismissed = useRef(false);
+  const [catalog, setCatalog] = useState<unknown>();
+  const [menu, setMenu] = useState<CompletionMenu>();
+  const [anchor, setAnchor] = useState({ left: 52, top: 9 });
+  const vocabulary = useMemo(() => catalogVocabulary(catalog, sounds), [catalog, sounds]);
+
+  useEffect(() => {
+    let current = true;
+    void fetch(`${apiRoot}/catalog.json`, { cache: "force-cache" })
+      .then(async (response) => response.ok ? await response.json() : undefined)
+      .then((value) => { if (current) setCatalog(value); })
+      .catch(() => { /* Static vocabulary is optional while the local collector reconnects. */ });
+    return () => { current = false; };
+  }, []);
+
+  const updateSuggestions = (force: boolean) => {
+    const editor = editorRef.current;
+    if (!editor || document.activeElement !== editor || (dismissed.current && !force) || editor.selectionStart !== editor.selectionEnd) {
+      setMenu(undefined);
+      return;
+    }
+    dismissed.current = false;
+    const context = completionContextAt(editor.value, editor.selectionStart);
+    if (!context || (!force && (!context.token || context.kind.endsWith("Value")))) {
+      setMenu(undefined);
+      return;
+    }
+    const entries = ruleCompletions(context, vocabulary);
+    if (!entries.length || (!force && entries.some((entry) => entry.value.toLowerCase() === context.token.toLowerCase()))) {
+      setMenu(undefined);
+      return;
+    }
+    const beforeCaret = editor.value.slice(0, editor.selectionStart);
+    const line = beforeCaret.split("\n").length - 1;
+    const column = beforeCaret.length - (beforeCaret.lastIndexOf("\n") + 1);
+    const left = Math.max(52, Math.min(editor.clientWidth - 220, 52 + column * 6.6 - editor.scrollLeft));
+    const rawTop = 9 + line * 19 - editor.scrollTop + 19;
+    setAnchor({ left, top: rawTop > editor.clientHeight - 150 ? Math.max(9, rawTop - 168) : rawTop });
+    setMenu({ context, entries, selected: 0 });
+  };
+
+  useEffect(() => { dismissed.current = true; setMenu(undefined); }, [profileKey]);
+  useEffect(() => {
+    const option = document.getElementById(`rule-completion-${menu?.selected ?? ""}`);
+    const list = option?.parentElement;
+    if (!option || !list) return;
+    // Reveal only within the popup; scrollIntoView also scrolls the editor's ancestors.
+    const top = option.offsetTop;
+    const bottom = top + option.offsetHeight;
+    if (top < list.scrollTop) list.scrollTop = top;
+    else if (bottom > list.scrollTop + list.clientHeight) list.scrollTop = bottom - list.clientHeight;
+  }, [menu?.selected]);
+
+  const accept = (index: number) => {
+    const editor = editorRef.current;
+    if (!editor || !menu) return;
+    const entry = menu.entries[index];
+    if (!entry) return;
+    const result = applyCompletion(editor.value, menu.context, entry);
+    dismissed.current = true;
+    setMenu(undefined);
+    onText(result.text);
+    window.requestAnimationFrame(() => {
+      editor.focus();
+      editor.setSelectionRange(result.caret, result.caret);
+    });
+  };
+
+  const moveSelection = (delta: number) => {
+    setMenu((current) => {
+      if (!current) return current;
+      return { ...current, selected: (current.selected + delta + current.entries.length) % current.entries.length };
+    });
+  };
+  return <div class="editor-frame">
+    <div class="line-numbers" aria-hidden="true" style={{ transform: `translateY(-${scroll}px)` }}>{text.split("\n").map((_, index) => <span key={index}>{index + 1}</span>)}</div>
+    <textarea
+      ref={editorRef}
+      aria-label="Filter rule text"
+      aria-autocomplete="list"
+      aria-controls={menu ? "rule-completion-list" : undefined}
+      aria-activedescendant={menu ? `rule-completion-${menu.selected}` : undefined}
+      aria-expanded={Boolean(menu)}
+      spellcheck={false}
+      value={text}
+      onInput={(event) => {
+        dismissed.current = false;
+        onText(event.currentTarget.value);
+        window.requestAnimationFrame(() => updateSuggestions(false));
+      }}
+      onBlur={() => { dismissed.current = true; setMenu(undefined); }}
+      onClick={() => { dismissed.current = true; setMenu(undefined); }}
+      onScroll={(event) => {
+        onScroll(event.currentTarget.scrollTop);
+        dismissed.current = true;
+        setMenu(undefined);
+      }}
+      onKeyDown={(event) => {
+        if (event.isComposing) return;
+        if (["ArrowLeft", "ArrowRight", "Home", "End", "PageUp", "PageDown"].includes(event.key) || (event.shiftKey && event.key.startsWith("Arrow"))) {
+          dismissed.current = true;
+          setMenu(undefined);
+          return;
+        }
+        if (event.ctrlKey && event.code === "Space") {
+          event.preventDefault();
+          updateSuggestions(true);
+          return;
+        }
+        if (event.key === "Escape" && menu) {
+          event.preventDefault();
+          event.stopPropagation();
+          dismissed.current = true;
+          setMenu(undefined);
+          return;
+        }
+        if (menu && (event.key === "ArrowDown" || event.key === "ArrowUp")) {
+          event.preventDefault();
+          moveSelection(event.key === "ArrowDown" ? 1 : -1);
+          return;
+        }
+        if (menu && (event.key === "Enter" || (event.key === "Tab" && !event.shiftKey))) {
+          event.preventDefault();
+          accept(menu.selected);
+          return;
+        }
+        if (event.key === "Tab") {
+          event.preventDefault();
+          const editor = event.currentTarget;
+          const changed = editIndent(text, editor.selectionStart, editor.selectionEnd, event.shiftKey);
+          dismissed.current = true;
+          setMenu(undefined);
+          onText(changed.text);
+          window.requestAnimationFrame(() => {
+            editor.focus();
+            editor.setSelectionRange(changed.selectionStart, changed.selectionEnd);
+          });
+        }
+      }}
+    />
+    {menu && <div id="rule-completion-list" class="rule-completions" role="listbox" aria-label="Rule suggestions" style={{ left: `${anchor.left}px`, top: `${anchor.top}px` }}>
+      {menu.entries.map((entry, index) => <button
+        id={`rule-completion-${index}`}
+        key={entry.value}
+        class={index === menu.selected ? "selected" : ""}
+        type="button"
+        role="option"
+        aria-selected={index === menu.selected}
+        onMouseDown={(event) => event.preventDefault()}
+        onClick={() => accept(index)}
+      ><b>{entry.value}</b>{entry.detail && <span>{entry.detail}</span>}</button>)}
+    </div>}
+  </div>;
+}
+
+function FiltersSurface({ grouping, state, text, dirty, scroll, profileName, selected, busy, onText, onScroll, onSave, onProfileName, onProfile, onSelect }: {
+  grouping: InventoryGrouping;   state: DesktopState | undefined; text: string; dirty: boolean; scroll: number; profileName: string; selected: LootItemView | undefined; busy: string | undefined; onText(value: string): void; onScroll(value: number): void; onSave(): void; onProfileName(value: string): void; onProfile(command: ProfileCommand): void; onSelect(uid: string): void;
 }) {
   const active = state?.profiles.find((profile) => profile.active);
   const activeName = active?.name ?? "";
@@ -303,8 +467,8 @@ function FiltersSurface({ grouping, state, text, dirty, scroll, lineNumbers, pro
     <div class="filter-layout">
       <section class="rule-editor-section" aria-labelledby="rule-text-title">
         <div class="section-heading"><div><div class="section-kicker">Rules · text</div><h2 id="rule-text-title">{active?.name ?? "Default rules"}{dirty && <span class="dirty-mark">Unsaved</span>}</h2></div><button class="primary-action" type="button" disabled={!state || !dirty || busy !== undefined} onClick={onSave}>{busy === "Filter was not saved" ? "Saving…" : "Save to the game"}</button></div>
-        <div class="editor-frame"><div class="line-numbers" aria-hidden="true" style={{ transform: `translateY(-${scroll}px)` }}>{lineNumbers.map((_, index) => <span key={index}>{index + 1}</span>)}</div><textarea aria-label="Filter rule text" spellcheck={false} value={text} onInput={(event) => onText(event.currentTarget.value)} onScroll={(event) => onScroll(event.currentTarget.scrollTop)} /></div>
-        <p class="editor-note">{state && ruleCount === 0 ? "No rules are active. Roll percentages are item data and do not paint or match an item." : "Every active rule is shown above. Save to parse the text and repaint the observed bag."}</p>
+        <RuleTextEditor text={text} sounds={state?.sounds ?? NO_SOUNDS} profileKey={activeName} scroll={scroll} onText={onText} onScroll={onScroll} />
+        <p class="editor-note">{state && ruleCount === 0 ? "No rules are active. Roll percentages are item data and do not paint or match an item." : "Every active rule is shown above. Save to parse the text and repaint the observed bag."} Ctrl+Space suggests; ↑/↓ choose, Enter/Tab insert, and Esc dismisses.</p>
       </section>
       <section class="filter-bag-preview" aria-label="Bag as painted by the filter">
         <div class="preview-head"><div class="section-kicker">{ruleCount === 0 ? "Inventory preview · no rules active" : "Your bag, as the filter paints it"}</div><div class="preview-tally"><span><b>{matched}</b> rule match{matched === 1 ? "" : "es"}</span><span><b>{Math.max(0, (state?.bag.length ?? 0) - matched)}</b> unmatched</span><span><b>{state?.bag.length ?? 0}</b> seen this session</span></div></div>
