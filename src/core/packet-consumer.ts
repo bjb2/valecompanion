@@ -32,9 +32,11 @@ export function consumeFishNetPacket(packet: CapturedFishNetPacket): PacketConsu
     }
     return { ignored: true };
   }
-  if (packet.rpcName) return { ignored: true };
+  // RPC names come from a bundled build map and can be stale even on resolved links.
+  // Validate character shape before discarding an otherwise unhandled named callback.
   const snapshot = identifyCharacterPayload(packet.payload);
   if (snapshot) return { snapshot, ignored: false };
+  if (packet.rpcName) return { ignored: true };
   const batch = decodePersonalStorageBatch(packet.payload);
   return batch ? { ...batch, ignored: false } : { ignored: true };
 }

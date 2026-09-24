@@ -193,13 +193,14 @@ export class LiteNetFragmentReassembler {
 }
 
 function fragmentKey(packet: CapturedLiteNetLibPacket, connectionId: string): string {
+  // Merged-envelope positions describe individual datagrams, not message identity:
+  // successive fragments can occupy different child indexes or arrive unmerged.
   if (packet.packet.property !== "channeled" || packet.packet.fragment === undefined) return connectionId;
   return [
     connectionId,
     packet.udpPacket.direction,
     packet.packet.channel,
     packet.packet.fragment.id,
-    packet.mergePath.join("."),
   ].join("|");
 }
 

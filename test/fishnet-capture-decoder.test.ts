@@ -23,6 +23,28 @@ describe("LiteNetLib fragment reassembly", () => {
     expect(warnings).toEqual([]);
   });
 
+  test("reassembles fragments independently of their merged envelope positions", () => {
+    const decoded: CapturedFishNetPacket[] = [];
+    const warnings: string[] = [];
+    const decoder = new FishNetCaptureDecoder({
+      onPacket: (packet) => decoded.push(packet),
+      onWarning: (warning) => warnings.push(warning),
+    });
+    const payload = Buffer.from([1, 0, 0, 0, 1, 0, 0]);
+    const first = fragmentPacket(41, 0, 3, payload.subarray(0, 2));
+    const second = fragmentPacket(41, 1, 3, payload.subarray(2, 4));
+    const third = fragmentPacket(41, 2, 3, payload.subarray(4));
+    first.mergePath = [0];
+    second.mergePath = [2];
+    // The final fragment arrives outside a merged envelope.
+    decoder.consume(second);
+    decoder.consume(third);
+    decoder.consume(first);
+
+    expect(decoded.map((packet) => packet.packetName)).toEqual(["authenticated"]);
+    expect(warnings).toEqual([]);
+  });
+
   test("deduplicates retransmitted parts without duplicating the completed message", () => {
     let reassembled = 0;
     const reassembler = new LiteNetFragmentReassembler(() => 100, () => { reassembled += 1; });
