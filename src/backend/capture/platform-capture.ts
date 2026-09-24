@@ -66,7 +66,7 @@ export function createPacketCapture(): PacketCapture {
     return new PacketCapture({
       runtime: linuxRuntime,
       targetProvider: linuxTargetProvider,
-      // The dependency's packet pipeline is platform-neutral, but v2.7.0 retains a Windows-only gate.
+      // The dependency's packet pipeline is platform-neutral but retains a Windows-only gate.
       // Its injected runtime and target-provider seams supply all platform-specific behavior here.
       platform: "win32",
     });

@@ -1,0 +1,37 @@
+:root { color-scheme: dark; font-family: "Segoe UI", system-ui, sans-serif; }
+* { box-sizing: border-box; }
+html, body, #app { width: 100%; height: 100%; margin: 0; }
+body { overflow: hidden; background: transparent; color: #edf4ee; }
+button { font: inherit; }
+.pickup-overlay { display: flex; flex-direction: column; width: 100%; height: 100%; padding: 16px; }
+.pickup-overlay.locked { pointer-events: none; }
+.pickup-overlay.repositioning { border: 1px dashed rgba(200, 169, 97, .72); border-radius: 10px; background: rgba(8, 12, 10, .38); pointer-events: auto; }
+.position-controls { display: flex; height: 32px; flex: none; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.drag-handle { display: flex; height: 30px; flex: 1; align-items: center; gap: 7px; padding: 0 9px; border: 1px solid rgba(200, 169, 97, .56); border-radius: 5px; background: rgba(14, 20, 17, .93); color: #d9c27f; font-size: 11px; font-weight: 650; letter-spacing: .04em; text-transform: uppercase; -webkit-app-region: drag; user-select: none; }
+.drag-handle span { font-size: 18px; line-height: 1; }
+.done-button { height: 30px; padding: 0 12px; border: 1px solid #c8a961; border-radius: 5px; background: #c8a961; color: #11150f; font-size: 11px; font-weight: 750; letter-spacing: .04em; text-transform: uppercase; -webkit-app-region: no-drag; cursor: pointer; }
+.done-button:hover { background: #dfc476; }
+.done-button:focus-visible { outline: 2px solid #f0d88f; outline-offset: 2px; }
+.pickup-stack { display: flex; min-height: 0; flex: 1; flex-direction: column; gap: 7px; overflow: hidden; }
+.pickup-card { position: relative; flex: none; min-height: 52px; overflow: hidden; padding: 7px 11px 7px 13px; border: 1px solid color-mix(in srgb, var(--pickup-color) 67%, #26342c); border-radius: 7px; background: linear-gradient(90deg, color-mix(in srgb, var(--pickup-color) 16%, #101713) 0%, rgba(12, 18, 15, .94) 48%); box-shadow: 0 4px 15px rgba(0, 0, 0, .32); animation: pickup-enter .18s ease-out both, pickup-leave .35s ease-in 4.65s forwards; }
+.pickup-heading { display: flex; align-items: center; gap: 9px; }
+.pickup-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 12px; margin: 8px 0 1px; padding-top: 7px; border-top: 1px solid rgba(255,255,255,.10); font-size: 11px; }
+.pickup-stats > div { min-width: 0; }
+.pickup-stats dt { display: flex; gap: 4px; align-items: center; overflow: hidden; color: #aebeb2; text-overflow: ellipsis; white-space: nowrap; }
+.pickup-stats dt small { color: #dfb5ff; font-size: 8px; text-transform: uppercase; }
+.pickup-stats dd { display: flex; gap: 7px; align-items: baseline; margin: 2px 0 0; font-variant-numeric: tabular-nums; }
+.pickup-stats dd strong { color: #f2f7f2; font-size: 13px; }
+.pickup-stats dd span { color: #83988b; font-size: 9px; }
+.pickup-stats .perfect dd, .pickup-stats .perfect dd strong, .pickup-stats .perfect dd span { color: #f1d37d; }
+.pickup-stats .over dd, .pickup-stats .over dd strong, .pickup-stats .over dd span { color: #e0b0ff; }
+.pickup-card.sample { animation: none; }
+.rule-edge { position: absolute; inset: 0 auto 0 0; width: 3px; background: var(--pickup-color); box-shadow: 0 0 9px var(--pickup-color); }
+.pickup-icon { width: 34px; height: 34px; flex: none; object-fit: contain; image-rendering: auto; }
+.pickup-icon.fallback { display: grid; place-items: center; border: 1px solid color-mix(in srgb, var(--pickup-color) 65%, #526058); border-radius: 5px; background: rgba(255, 255, 255, .04); color: var(--pickup-color); font-size: 17px; }
+.pickup-copy { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 2px; }
+.pickup-copy strong { overflow: hidden; color: #f2f7f2; font-size: 13px; font-weight: 700; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
+.pickup-tag { overflow: hidden; color: var(--pickup-color); font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: 9px; font-weight: 700; letter-spacing: .1em; line-height: 1.1; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
+.pickup-quantity { flex: none; color: var(--pickup-color); font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: 15px; font-weight: 750; }
+@keyframes pickup-enter { from { opacity: 0; transform: translateX(16px) scale(.98); } to { opacity: 1; transform: translateX(0) scale(1); } }
+@keyframes pickup-leave { to { opacity: 0; transform: translateX(12px); } }
+@media (prefers-reduced-motion: reduce) { .pickup-card { animation: none; } }

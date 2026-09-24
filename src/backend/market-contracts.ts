@@ -1,5 +1,5 @@
 export const MARKET_PROTOCOL_VERSION = 2 as const;
-export const MARKET_PACKAGE_VERSION = "2.0.0";
+export const MARKET_PACKAGE_VERSION = "2.0.2";
 export const MARKET_API_URL = "https://market-api.spiritvalers.com";
 
 export interface MarketUploadStat {

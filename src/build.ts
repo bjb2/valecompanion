@@ -22,6 +22,7 @@ await Promise.all([
 
 await Promise.all([
   bundle(path.join(root, "src", "frontend", "index.tsx"), rendererOutput, "browser", "esm", "index.[ext]"),
+  bundle(path.join(root, "src", "frontend", "pickup-overlay.tsx"), rendererOutput, "browser", "esm", "pickup-overlay.[ext]"),
   bundle(path.join(root, "src", "backend", "index.ts"), collectorOutput, "bun", "esm", "index.[ext]"),
   bundle(path.join(root, "src", "electron", "main.ts"), electronOutput, "node", "esm", "main.[ext]", ["electron", "electron-updater"]),
   bundle(path.join(root, "src", "electron", "preload.ts"), electronOutput, "node", "cjs", "preload.cjs", ["electron"]),
@@ -30,6 +31,8 @@ await Promise.all([
 await Promise.all([
   copyFile(path.join(root, "src", "frontend", "index.html"), path.join(rendererOutput, "index.html")),
   copyFile(path.join(root, "src", "frontend", "market.html"), path.join(rendererOutput, "market.html")),
+  copyFile(path.join(root, "src", "frontend", "pickup-overlay.html"), path.join(rendererOutput, "pickup-overlay.html")),
+  copyFile(path.join(root, "src", "frontend", "pickup-overlay.css"), path.join(rendererOutput, "pickup-overlay.css")),
   copyFile(path.join(root, "assets", "catalog.json"), path.join(rendererOutput, "catalog.json")),
   cp(path.join(root, "assets", "fonts"), path.join(rendererOutput, "fonts"), { recursive: true }),
   copyFile(path.join(root, "src", "frontend", "index.css"), path.join(rendererOutput, "index.css")),

@@ -254,7 +254,6 @@ export class MarketContributor {
       ...packet,
       linkedPacketName: "targetRpc",
       linkResolved: true,
-      rpcHash: 73,
       rpcName: "RequestVendorItemList_T",
       rpcResolution: "verified",
       networkBehaviourType: "PlayerController",

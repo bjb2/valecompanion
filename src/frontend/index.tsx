@@ -14,6 +14,7 @@ import { MarketWorkspace } from "./market-workspace.tsx";
 import { bagSignature, marketOpenRequest, type MarketBridgeMessage } from "./market-bridge.ts";
 import { companionModules, isModuleId, type ModuleId } from "./modules.ts";
 import { UpdateNotice, UpdateSettings, useUpdates, type UpdatesModel } from "./updates.tsx";
+import type { PickupOverlayState } from "../shared/pickup-overlay.ts";
 
 const apiRoot = window.location.origin;
 
@@ -211,6 +212,8 @@ function GlobalSettings({ updates, state, devices, busy, error, onClose, onUpdat
   onRestart(): void;
 }) {
   const linuxCapture = state ? ["libpcap", "libpcap (direct)", "dumpcap"].includes(state.capture.backend) : false;
+  const [soundVolume, setSoundVolume] = useState(state?.soundVolume ?? 100);
+  useEffect(() => { setSoundVolume(state?.soundVolume ?? 100); }, [state?.soundVolume]);
   return <aside class="settings-drawer" aria-label="Settings">
     <header><div><div class="eyebrow">Vale Companion</div><h2>Settings</h2></div><button type="button" onClick={onClose} aria-label="Close settings"><X size={17} /></button></header>
     <div class="settings-scroll">
@@ -227,6 +230,14 @@ function GlobalSettings({ updates, state, devices, busy, error, onClose, onUpdat
       </section>
       <section>
         <div class="settings-heading"><span>Loot sounds</span></div>
+        <label class="settings-field">
+          <span>Alert volume <output>{soundVolume}%</output></span>
+          <input type="range" aria-label="Alert volume" min="0" max="100" step="1"
+            value={soundVolume} disabled={!state || busy}
+            onInput={(event) => setSoundVolume(Number(event.currentTarget.value))}
+            onChange={(event) => onUpdate({ soundVolume: Number(event.currentTarget.value) })} />
+          <small>Applies to built-in and custom sounds. 0% mutes audio without hiding pickup history.</small>
+        </label>
         <div class="settings-copy">
           <strong>Custom alert folder</strong>
           <p>Drop <code>.wav</code> files here. Vale Companion detects them automatically; use <code>Sound filename</code> in a rule, with or without the extension.</p>
@@ -237,6 +248,7 @@ function GlobalSettings({ updates, state, devices, busy, error, onClose, onUpdat
           <p class="sound-list">{(state?.sounds ?? []).join(", ") || "Loading…"}</p>
         </div>
       </section>
+      <PickupOverlaySettings />
       <section>
         <div class="settings-heading"><span>Diagnostics</span></div>
         {state?.warning && <div class="diagnostic-warning">{state.warning}</div>}
@@ -263,6 +275,52 @@ function GlobalSettings({ updates, state, devices, busy, error, onClose, onUpdat
       <section class="runtime-summary"><div class="settings-heading"><span>Runtime</span></div><dl><div><dt>Status</dt><dd><span class={`state-light ${state?.phase ?? "offline"}`} />{state?.detail ?? "Connecting"}</dd></div><div><dt>Last traffic</dt><dd>{state?.lastAttributedPacketAt ? new Date(state.lastAttributedPacketAt).toLocaleString() : "Not observed"}</dd></div><div><dt>Version</dt><dd>{state ? `v${state.version}` : "—"}</dd></div></dl></section>
     </div>
   </aside>;
+}
+
+function PickupOverlaySettings() {
+  const api = window.valeCompanion?.pickupOverlay;
+  const [state, setState] = useState<PickupOverlayState>();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string>();
+  useEffect(() => {
+    if (!api) return;
+    let active = true;
+    const unsubscribe = api.onState((next) => { if (active) setState(next); });
+    void api.getState().then(
+      (next) => { if (active) setState(next); },
+      (cause) => { if (active) setError(errorMessage(cause)); },
+    );
+    return () => { active = false; unsubscribe(); };
+  }, [api]);
+
+  const update = async (action: () => Promise<PickupOverlayState>) => {
+    setBusy(true);
+    setError(undefined);
+    try { setState(await action()); }
+    catch (cause) { setError(errorMessage(cause)); }
+    finally { setBusy(false); }
+  };
+
+  return <section>
+    <div class="settings-heading"><span>Pickup overlay</span></div>
+    {error && <div class="settings-error" role="alert">{error}</div>}
+    <label class="switch-row">
+      <span><strong>On-screen pickups</strong><small>Show matched loot with icons, quantities, and rule colors.</small></span>
+      <input type="checkbox" role="switch" checked={state?.enabled ?? false} disabled={!api || !state || busy}
+        onChange={(event) => { const enabled = event.currentTarget.checked; if (api) void update(() => api.setEnabled(enabled)); }} />
+    </label>
+    <div class="overlay-settings-actions">
+      <button type="button" disabled={!api || !state?.enabled || busy}
+        onClick={() => { if (api) void update(() => state?.repositioning ? api.finishReposition() : api.reposition()); }}>
+        {state?.repositioning ? "Lock position" : "Reposition"}
+      </button>
+      <button type="button" disabled={!api || !state || busy}
+        onClick={() => { if (api) void update(() => api.resetPosition()); }}>Reset position</button>
+    </div>
+    <div class="settings-copy"><p>{api
+      ? "Up to five pickups fade after five seconds. Click-through while locked; drag the handle in Reposition mode, then choose Done. Position is remembered. Best with borderless or windowed gameplay; exclusive fullscreen may hide the overlay."
+      : "The pickup overlay is available in the desktop application."}</p></div>
+  </section>;
 }
 
 async function responseError(response: Response): Promise<string> {

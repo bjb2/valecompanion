@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { artifactFacts, equipmentFacts } from "../src/core/catalog.ts";
 import { explainCondition, matchLoot } from "../src/core/filter/loot-filter.ts";
 import { LootSession } from "../src/core/loot-session.ts";
+import type { PickupNotification } from "../src/shared/pickup-overlay.ts";
 import type { SaviArtifact, SaviEquip, SaviGem, SaviSnapshot, SaviStack, SaviSubstat } from "../src/core/types.ts";
 
 function equipment(uid: string, substats: Array<SaviSubstat | null> = []): SaviEquip {
@@ -114,6 +115,38 @@ test("cards enter the bag and repeated stack increases trigger additions", () =>
   expect(session.consume(snapshot([], false, [], [card(2)])).added).toHaveLength(1);
   expect(session.consume(snapshot([], false, [], [card(2)])).added).toHaveLength(0);
   expect(session.bag()[0]?.count).toBe(2);
+});
+
+test("pickup notifications use stack deltas independently of sound", () => {
+  const pickups: PickupNotification[] = [];
+  const played: string[] = [];
+  const session = new LootSession({
+    soundsEnabled: () => false,
+    onSound: (sound) => { played.push(sound); return true; },
+    onPickup: (pickup) => { pickups.push(pickup); },
+  });
+  session.setFilter('Show "cards"\n  Type Card\n  Tag CARD\n  Color #12ab34\n  Sound chime');
+
+  session.consume(snapshot([], false, [], [card(1)]));
+  session.consume(snapshot([], false, [], [card(3)]));
+  session.consume(snapshot([], false, [], [card(3)]));
+  session.consume(snapshot([], false, [], [card(2)]));
+  session.consume(snapshot([], false, [], [card(5)]));
+
+  expect(pickups.map((pickup) => pickup.quantity)).toEqual([2, 3]);
+  expect(session.history().map((entry) => entry.sequence)).toEqual([2, 1]);
+  expect(played).toEqual([]);
+});
+
+test("silent inventory sessions do not emit pickup notifications", () => {
+  const pickups: string[] = [];
+  const session = new LootSession({ silent: true, onPickup: (pickup) => { pickups.push(pickup.name); } });
+  session.setFilter('Show "shards"\n  Name "Abyss Shard"');
+
+  session.consume(snapshot([]));
+  session.consume(snapshot([equipment("silent")]));
+
+  expect(pickups).toEqual([]);
 });
 
 test("catalog facts use displayed values and preserve chaos slot holes", () => {
@@ -320,9 +353,9 @@ test("artifact category rule matches a three-top primary artifact", () => {
     ...item,
     uid: "no-primary-artifact",
     substats: [
-      { index: 0, type: 69, roll: 100, valueStr: null },
-      { index: 1, type: 71, roll: 100, valueStr: null },
-      { index: 2, type: 72, roll: 100, valueStr: null },
+      { index: 0, type: 71, roll: 100, valueStr: null },
+      { index: 1, type: 72, roll: 100, valueStr: null },
+      { index: 2, type: 69, roll: 100, valueStr: null },
     ],
   });
   expect(noPrimary.topRolls).toBe(3);
@@ -346,9 +379,14 @@ test("high-roll metrics do not imply an active filter rule", () => {
   expect(session.bag()[0]?.match).toBeNull();
 });
 
-test("hidden matches never project, play, or enter history", () => {
+test("hidden matches never project, play, enter history, or notify", () => {
   const played: string[] = [];
-  const session = new LootSession({ soundsEnabled: () => true, onSound: (sound) => { played.push(sound); return true; } });
+  const pickups: PickupNotification[] = [];
+  const session = new LootSession({
+    soundsEnabled: () => true,
+    onSound: (sound) => { played.push(sound); return true; },
+    onPickup: (pickup) => { pickups.push(pickup); },
+  });
   session.setFilter('AlwaysHide "Abyss Shard"');
   session.consume(snapshot([]));
   const result = session.consume(snapshot([equipment("hidden")]));
@@ -356,6 +394,7 @@ test("hidden matches never project, play, or enter history", () => {
   expect(session.bag()[0]?.match).toBeNull();
   expect(session.history()).toEqual([]);
   expect(played).toEqual([]);
+  expect(pickups).toEqual([]);
 });
 
 test("one snapshot awards sound priority once and records every visible match", () => {

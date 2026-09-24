@@ -159,6 +159,14 @@ The in-app editor offers context-sensitive completions while typing unfinished n
 
 Profiles are named saved filter texts. You can create, duplicate, rename, and activate them; profile names must begin with a letter or number and may then contain letters, numbers, spaces, underscores, and hyphens (up to 64 characters). The editor prevents switching profiles while edits are unsaved, so save or discard those edits first. Saving validates the filter, stores it in the active profile, and repaints the observed bag; an invalid filter is not saved.
 
+### Alert volume and pickup overlay
+
+**Settings → Loot sounds → Alert volume** controls built-in and custom sounds from 0–100% and is saved across restarts. Existing installations start at 100%. Setting 0% mutes audio without suppressing loot history or visual notifications.
+
+Enable **Settings → Pickup overlay → On-screen pickups** for a transparent, always-on-top desktop overlay. Matching pickups show their icon, name, newly acquired quantity, and rule color/tag. Equipment and artifacts also show decoded substat values, roll percentages, Chaos markers, and refinement. The overlay shows up to five recent pickups, keeping fewer when expanded cards need more room; cards fade after five seconds. Hidden/unmatched items, the initial inventory baseline, and silent storage transfers do not produce notifications.
+
+Choose **Reposition**, drag the overlay's header, then choose **Done** or **Lock position**. Locked overlays pass clicks through to the game. Position and enabled state are saved locally; **Reset position** returns it to the primary display. Borderless/windowed gameplay is recommended: exclusive fullscreen and Linux window-manager policies may prevent a desktop overlay from appearing above the game.
+
 ## Gold analytics
 
 The Gold workspace starts a local session from the first authoritative coin total sent by the game server. It separates positive and negative balance changes, then reports gross gold per hour and minute, net gold per hour, a rolling 15-minute pace, earning and spending events, and a one-hour five-minute-bucket chart. Large values use compact notation with the exact amount available on hover.
@@ -172,6 +180,8 @@ Gold per confirmed kill uses the cumulative kill count included in character sna
 The market browser loads the current public listing snapshot from [market.spiritvalers.com](https://market.spiritvalers.com/). Item inspectors show a rolling seven-day series of hourly observed asking-price quartiles. These are listing observations, not completed-sale history.
 
 Market contribution is enabled on fresh installations and can be disabled under **Settings → Market contribution**. The contributor observes market result traffic already delivered to the game client, normalizes supported listing fields, suppresses duplicates, and uploads bounded batches to the public service.
+
+Uploads require browsing market listings in the game; the companion does not query the game server itself. Accepted observations appear in the public listings API before the next ten-minute snapshot publication. A fresh but empty snapshot is different from a download error: inspect decoded-listing and upload activity as well as snapshot freshness. The capture, item, and market decoder packages must stay compatible with the current game's RPC map.
 
 ## Privacy and game boundary
 

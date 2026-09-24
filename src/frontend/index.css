@@ -317,6 +317,12 @@ h1, h2, h3 { font-family: var(--ui); font-weight: 600; }
 .settings-field { display: block; padding: 13px 0; border-top: 1px solid var(--line); }
 .settings-field > span { display: block; margin-bottom: 6px; color: var(--ink); font-size: 11px; font-weight: 600; }
 .settings-field select { width: 100%; min-height: 32px; padding: 0 8px; border: 1px solid var(--line2); border-radius: 3px; background: var(--sunk); color: var(--ink); }
+.settings-field input[type="range"] { width: 100%; margin: 6px 0; accent-color: var(--gold); cursor: pointer; }
+.settings-field input[type="range"]:disabled { opacity: .45; cursor: default; }
+.settings-field output { float: right; color: var(--gold); font-family: var(--mono); }
+.overlay-settings-actions { display: flex; gap: 8px; margin: 12px 0; }
+.overlay-settings-actions button { padding: 7px 11px; border: 1px solid var(--line2); border-radius: 3px; background: var(--sunk); color: var(--ink); font-size: 11px; }
+.overlay-settings-actions button:disabled { opacity: .45; cursor: default; }
 .settings-field small { display: block; margin-top: 6px; color: var(--faint); font-size: 10px; }
 .settings-error { margin-top: 14px; padding: 8px 10px; border-left: 2px solid var(--bad); background: rgba(226,105,95,.07); color: var(--bad); font-size: 10px; }
 .settings-copy { padding: 12px 0; border-top: 1px solid var(--line); }

@@ -33,6 +33,7 @@ import { canonicalSoundName, findCustomSound, listCustomSounds, SOUND_NAMES, SOU
 type Persisted = {
   enabled: boolean;
   soundsEnabled: boolean;
+  soundVolume: number;
   contributionEnabled: boolean;
   deviceName: string | null;
   linuxCaptureMode: "auto" | "libpcap" | "dumpcap";
@@ -84,6 +85,7 @@ function defaultSettings(): Persisted {
   return {
     enabled: true,
     soundsEnabled: true,
+    soundVolume: 100,
     contributionEnabled: true,
     deviceName: null,
     linuxCaptureMode: "auto",
@@ -108,6 +110,8 @@ function loadSettings(): Persisted {
     return {
       enabled: typeof raw.enabled === "boolean" ? raw.enabled : true,
       soundsEnabled: typeof raw.soundsEnabled === "boolean" ? raw.soundsEnabled : true,
+      soundVolume: typeof raw.soundVolume === "number" && Number.isInteger(raw.soundVolume)
+        && raw.soundVolume >= 0 && raw.soundVolume <= 100 ? raw.soundVolume : 100,
       contributionEnabled: typeof raw.contributionEnabled === "boolean" ? raw.contributionEnabled : true,
       deviceName: raw.deviceName === null || typeof raw.deviceName === "string" ? raw.deviceName : null,
       linuxCaptureMode: (raw.linuxCaptureMode === "libpcap" || raw.linuxCaptureMode === "dumpcap") ? raw.linuxCaptureMode : "auto",
@@ -130,7 +134,7 @@ function saveSettings(value: Persisted): void {
 let persisted = loadSettings();
 setLinuxCaptureMode(persisted.linuxCaptureMode);
 const session = new LootSession({
-  soundsEnabled: () => persisted.soundsEnabled,
+  soundsEnabled: () => persisted.soundsEnabled && persisted.soundVolume > 0,
   onSound: async (sound) => {
     const requested = canonicalSoundName(sound);
     const builtin = requested?.toLowerCase();
@@ -143,6 +147,13 @@ const session = new LootSession({
     } catch (error) {
       warning = `Could not dispatch alert sound: ${error instanceof Error ? error.message : String(error)}`;
       return false;
+    }
+  },
+  onPickup: (pickup) => {
+    try {
+      process.stdout.write(serializeCollectorMessage({ type: "pickup", pickup }));
+    } catch (error) {
+      warning = `Could not dispatch pickup alert: ${error instanceof Error ? error.message : String(error)}`;
     }
   },
 });
@@ -557,6 +568,7 @@ function currentState(): DesktopState {
     version: applicationVersion,
     enabled: persisted.enabled,
     soundsEnabled: persisted.soundsEnabled,
+    soundVolume: persisted.soundVolume,
     contributionEnabled: persisted.contributionEnabled,
     deviceName: persisted.deviceName,
     linuxCaptureMode: persisted.linuxCaptureMode,
@@ -652,7 +664,13 @@ async function routeRequest(request: Request): Promise<Response> {
             ? { filename: "index.js", contentType: "text/javascript; charset=utf-8" }
             : route === "/index.css"
               ? { filename: "index.css", contentType: "text/css; charset=utf-8" }
-              : undefined;
+              : route === "/pickup-overlay.html"
+                ? { filename: "pickup-overlay.html", contentType: "text/html; charset=utf-8" }
+                : route === "/pickup-overlay.js"
+                  ? { filename: "pickup-overlay.js", contentType: "text/javascript; charset=utf-8" }
+                  : route === "/pickup-overlay.css"
+                    ? { filename: "pickup-overlay.css", contentType: "text/css; charset=utf-8" }
+                    : undefined;
     if (asset) {
       const file = Bun.file(path.join(rendererDirectory, asset.filename));
       if (!await file.exists()) return errorResponse("desktop renderer is missing", 500);
@@ -778,6 +796,8 @@ async function routeRequest(request: Request): Promise<Response> {
     }
     if ((update.enabled !== undefined && typeof update.enabled !== "boolean")
       || (update.soundsEnabled !== undefined && typeof update.soundsEnabled !== "boolean")
+      || (update.soundVolume !== undefined && (typeof update.soundVolume !== "number"
+        || !Number.isInteger(update.soundVolume) || update.soundVolume < 0 || update.soundVolume > 100))
       || (update.contributionEnabled !== undefined && typeof update.contributionEnabled !== "boolean")
       || (update.deviceName !== undefined && update.deviceName !== null && typeof update.deviceName !== "string")
       || (update.linuxCaptureMode !== undefined && update.linuxCaptureMode !== "auto" && update.linuxCaptureMode !== "libpcap" && update.linuxCaptureMode !== "dumpcap")) {
@@ -788,6 +808,7 @@ async function routeRequest(request: Request): Promise<Response> {
       || (update.linuxCaptureMode !== undefined && update.linuxCaptureMode !== persisted.linuxCaptureMode);
     if (update.enabled !== undefined) persisted.enabled = update.enabled;
     if (update.soundsEnabled !== undefined) persisted.soundsEnabled = update.soundsEnabled;
+    if (update.soundVolume !== undefined) persisted.soundVolume = update.soundVolume;
     if (update.contributionEnabled !== undefined) {
       persisted.contributionEnabled = update.contributionEnabled;
       marketContributor.setEnabled(update.contributionEnabled);

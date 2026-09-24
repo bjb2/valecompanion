@@ -1,4 +1,5 @@
 import type { AlertHistoryView, LootItemView, LootMatchView } from "../shared/contracts.ts";
+import type { PickupNotification } from "../shared/pickup-overlay.ts";
 import { artifactFacts, cardFacts, equipmentFacts, gemFacts, stackFacts, cosmeticFacts } from "./catalog.ts";
 import { matchLoot, type LootContext, type LootMatch } from "./filter/loot-filter.ts";
 import { parseLootFilter, type ParsedFilter } from "./filter/loot-dsl.ts";
@@ -10,6 +11,7 @@ export interface LootSessionOptions {
   silent?: boolean;
   soundsEnabled?: () => boolean;
   onSound?: (sound: string) => boolean | Promise<boolean>;
+  onPickup?: (pickup: PickupNotification) => void;
 }
 
 export interface SnapshotResult {
@@ -23,12 +25,15 @@ type Entry = {
   view: Omit<LootItemView, "match">;
 };
 
+type AddedEntry = readonly [entry: Entry, quantity: number];
+
 export class LootSession {
   readonly #entries = new Map<string, Entry>();
   readonly #history: AlertHistoryView[] = [];
   readonly #limit: number;
   readonly #soundsEnabled: () => boolean;
   readonly #onSound: (sound: string) => boolean | Promise<boolean>;
+  readonly #onPickup: (pickup: PickupNotification) => void;
   #baseline = false;
   #sequence = 0;
   #parsed: ParsedFilter = parseLootFilter("");
@@ -37,6 +42,7 @@ export class LootSession {
     this.#limit = options.historyLimit ?? 200;
     this.#soundsEnabled = options.soundsEnabled ?? (() => false);
     this.#onSound = options.onSound ?? (() => false);
+    this.#onPickup = options.onPickup ?? (() => {});
   }
 
   setFilter(text: string): ParsedFilter {
@@ -113,21 +119,23 @@ export class LootSession {
     }
 
     const baseline = !this.#baseline;
-    const added = baseline || silent
-      ? []
-      : [...next]
-        .filter(([uid, entry]) => entry.view.count > (this.#entries.get(uid)?.view.count ?? 0))
-        .map(([, entry]) => entry);
+    const added: AddedEntry[] = [];
+    if (!baseline && !silent) {
+      for (const [uid, entry] of next) {
+        const quantity = entry.view.count - (this.#entries.get(uid)?.view.count ?? 0);
+        if (quantity > 0) added.push([entry, quantity]);
+      }
+    }
     this.#entries.clear();
     for (const [uid, entry] of next) this.#entries.set(uid, entry);
     this.#baseline = true;
 
-    const views = added.map(({ owned, view }) => ({
+    const views = added.map(([{ owned, view }]) => ({
       ...view,
       match: project(matchLoot(owned, this.#parsed.rules, this.context())),
     }));
     let soundTaken = false;
-    for (const view of views) {
+    for (const [index, view] of views.entries()) {
       if (!view.match) continue;
       const soundWinner = !soundTaken && view.match.sound !== null;
       const soundResult = soundWinner && this.#soundsEnabled()
@@ -135,6 +143,16 @@ export class LootSession {
         : false;
       if (soundWinner) soundTaken = true;
       const recorded = this.record(view, soundWinner, soundResult === true);
+      this.#onPickup({
+        sequence: recorded.sequence,
+        name: view.name,
+        icon: view.icon,
+        quantity: added[index]![1],
+        color: view.match.color,
+        tag: view.match.tag || null,
+        refine: view.refine,
+        lines: view.lines,
+      });
       if (typeof soundResult !== "boolean") {
         void soundResult.then(
           (played) => this.updateSoundResult(recorded, played),

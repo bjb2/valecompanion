@@ -1,10 +1,12 @@
 {
   "name": "valecompanion",
-  "version": "0.4.6",
+  "version": "0.5.0",
   "private": true,
   "description": "Unified passive companion for Spirit Vale",
   "homepage": "https://github.com/bjb2/valecompanion",
-  "author": { "name": "bjb2" },
+  "author": {
+    "name": "bjb2"
+  },
   "desktopName": "valecompanion",
   "license": "AGPL-3.0-or-later",
   "type": "module",
@@ -25,9 +27,9 @@
     "check": "bun run typecheck && bun test"
   },
   "dependencies": {
-    "@kar-mi/spirit-vale-tools-capture": "2.7.0",
-    "@kar-mi/spirit-vale-tools-items": "0.1.9",
-    "@kar-mi/spirit-vale-tools-market": "2.0.0",
+    "@kar-mi/spirit-vale-tools-capture": "3.0.3",
+    "@kar-mi/spirit-vale-tools-items": "0.1.12",
+    "@kar-mi/spirit-vale-tools-market": "2.0.2",
     "electron-updater": "^6.8.9",
     "lucide-preact": "^0.544.0",
     "preact": "10.29.7"
@@ -48,7 +50,12 @@
     "productName": "Vale Companion",
     "executableName": "Vale Companion",
     "asar": true,
-    "publish": [{ "provider": "github", "owner": "bjb2", "repo": "valecompanion", "releaseType": "draft" }],
+    "publish": [{
+      "provider": "github",
+      "owner": "bjb2",
+      "repo": "valecompanion",
+      "releaseType": "draft"
+    }],
     "directories": {
       "output": "dist"
     },

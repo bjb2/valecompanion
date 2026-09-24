@@ -5,9 +5,9 @@
     "": {
       "name": "valecompanion",
       "dependencies": {
-        "@kar-mi/spirit-vale-tools-capture": "2.7.0",
-        "@kar-mi/spirit-vale-tools-items": "0.1.9",
-        "@kar-mi/spirit-vale-tools-market": "2.0.0",
+        "@kar-mi/spirit-vale-tools-capture": "3.0.3",
+        "@kar-mi/spirit-vale-tools-items": "0.1.12",
+        "@kar-mi/spirit-vale-tools-market": "2.0.2",
         "electron-updater": "^6.8.9",
         "lucide-preact": "^0.544.0",
         "preact": "10.29.7",
@@ -44,13 +44,13 @@
 
     "@isaacs/fs-minipass": ["@isaacs/fs-minipass@4.0.1", "", { "dependencies": { "minipass": "^7.0.4" } }, "sha512-wgm9Ehl2jpeqP3zw/7mo3kRHFp5MEDhqAdwy1fTGkHAwnkGOVsgpvQhL8B5n1qlb01jV3n/bI0ZfZp5lWA1k4w=="],
 
-    "@kar-mi/spirit-vale-tools-capture": ["@kar-mi/spirit-vale-tools-capture@2.7.0", "", {}, "sha512-moIBUYE+EtROhouXIPEhG6bQ9jFbFfLypgAs322I6Blz0YxMbPp06qRpTgIVF8aDedNyJDNasuZA1jwVEyXLCQ=="],
+    "@kar-mi/spirit-vale-tools-capture": ["@kar-mi/spirit-vale-tools-capture@3.0.3", "", {}, "sha512-SAGH5vkZBufhWqAXc64XtMePqysZnAqUahi+1NjwHLGdgIoY5tv3Ca8E7sFc4dTlwsYyde2JMy4MXvPltr7G4A=="],
 
-    "@kar-mi/spirit-vale-tools-items": ["@kar-mi/spirit-vale-tools-items@0.1.9", "", { "dependencies": { "@kar-mi/spirit-vale-tools-capture": "^2.2.0" } }, "sha512-Gp6flr5DwskiQiePiUBANz/phHardD4J0YUSRss1B93y35Gdw4JYjO6AIHajtfdIz/4NtgueDF4yOYwxSJcVeA=="],
+    "@kar-mi/spirit-vale-tools-items": ["@kar-mi/spirit-vale-tools-items@0.1.12", "", { "dependencies": { "@kar-mi/spirit-vale-tools-capture": "^3.0.3" } }, "sha512-7fcoqZiTTZ0N7XIaPlAiSz4foPibVAW4Tr3lERlQTEDuaiZYsTg0TSegq0DvAiZjQpyZq13HuKJlKOQ8n4FN3A=="],
 
-    "@kar-mi/spirit-vale-tools-logging": ["@kar-mi/spirit-vale-tools-logging@0.9.0", "", {}, "sha512-LabpFRZTC7yYEbOSFwva8R4mV2IHcZDB/OsC9iQ6f0dgpN2PH3e2yWLGYsP7JbzF0NPvFOuH0IHaWjZCbTQcMQ=="],
+    "@kar-mi/spirit-vale-tools-logging": ["@kar-mi/spirit-vale-tools-logging@0.10.1", "", {}, "sha512-SmsxzHXfsMtneUus5Go52LC14l06zonXOiB10t7k8mGoOKB9KTjaK1SXLlGe3gGro3JjL83G8imdZvPoI+jLAg=="],
 
-    "@kar-mi/spirit-vale-tools-market": ["@kar-mi/spirit-vale-tools-market@2.0.0", "", { "dependencies": { "@kar-mi/spirit-vale-tools-capture": "^2.3.0", "@kar-mi/spirit-vale-tools-items": "^0.1.9", "@kar-mi/spirit-vale-tools-logging": "^0.9.0" } }, "sha512-pjDLIgZ/LjtYorz0yunUqfvTu+RLgoXZ1MiJDnpBCiks0zguCBSCZhn/ii/tXP8w/2aERWKolT7HcthZNlmI6A=="],
+    "@kar-mi/spirit-vale-tools-market": ["@kar-mi/spirit-vale-tools-market@2.0.2", "", { "dependencies": { "@kar-mi/spirit-vale-tools-capture": "^3.0.1", "@kar-mi/spirit-vale-tools-items": "^0.1.11", "@kar-mi/spirit-vale-tools-logging": "^0.10.1" } }, "sha512-wbhIhJzbQzUp4yRMGKdRQhq/9nlalw7WCDxei8F75rpZUkZ8E+Q3YnKPQ9OfRysi8LtWTjQixtwMHUpBBBXpQA=="],
 
     "@malept/cross-spawn-promise": ["@malept/cross-spawn-promise@2.0.0", "", { "dependencies": { "cross-spawn": "^7.0.1" } }, "sha512-1DpKU0Z5ThltBwjNySMC14g0CkbyhCaz9FkhxqNsZI6uAPJXFS8cMXlBKo26FJ8ZuW6S9GCMcR9IO5k2X5/9Fg=="],
 

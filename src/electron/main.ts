@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { app, BrowserWindow, dialog } from "electron";
 import { parseCollectorMessage } from "../shared/collector-protocol.ts";
 import { createDiagnosticLogger, formatError } from "../shared/diagnostics.ts";
+import { PickupOverlayController } from "./pickup-overlay.ts";
 import { setupUpdates } from "./updates.ts";
 import type { UpdateController } from "./update-controller.ts";
 
@@ -19,6 +20,7 @@ let collectorStopping = false;
 let collectorReady = false;
 let diagnostics = createDiagnosticLogger("desktop");
 let updates: UpdateController | undefined;
+let pickupOverlay: PickupOverlayController | undefined;
 let applicationUrl = "";
 
 app.setName("Vale Companion");
@@ -37,6 +39,12 @@ else {
     try {
       const port = await startCollector();
       createMainWindow(port);
+      pickupOverlay = new PickupOverlayController({
+        data: runtimePaths().data,
+        mainWindow: () => mainWindow,
+        smokeTest: packagedSmokeTest,
+      });
+      pickupOverlay.start(applicationUrl);
       updates = setupUpdates({
         data: runtimePaths().data,
         window: () => mainWindow,
@@ -46,7 +54,10 @@ else {
           if (collector) await stopCollector();
           const port = await startCollector();
           applicationUrl = `http://127.0.0.1:${port}/`;
-          await mainWindow?.loadURL(applicationUrl);
+          await Promise.all([
+            mainWindow?.loadURL(applicationUrl),
+            pickupOverlay?.reload(applicationUrl),
+          ]);
         },
       });
     } catch (error) {
@@ -131,6 +142,8 @@ async function startCollector(): Promise<number> {
       } else if (message.type === "play-sound") {
         diagnostics.debug("Forwarding collector sound alert", { name: message.name, windowAvailable: Boolean(mainWindow) });
         mainWindow?.webContents.send("valeCompanion:play-sound", message.name);
+      } else if (message.type === "pickup") {
+        pickupOverlay?.forwardPickup(message.pickup);
       }
     });
     collector!.once("error", (error) => {
@@ -195,6 +208,8 @@ function createMainWindow(port: number): void {
   });
   mainWindow.on("closed", () => {
     diagnostics.info("Desktop window closed");
+    pickupOverlay?.dispose();
+    pickupOverlay = undefined;
     mainWindow = undefined;
   });
   void mainWindow.loadURL(applicationUrl).catch((error) => {

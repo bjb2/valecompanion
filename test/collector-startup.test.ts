@@ -81,6 +81,34 @@ test("collector reports a failed final save through its exit code", async () => 
   }
 }, 10_000);
 
+test("collector pickup protocol permits only bounded safe display fields", () => {
+  const valid: CollectorMessage = {
+    type: "pickup",
+    pickup: {
+      sequence: 42,
+      name: "Abyss Shard",
+      icon: "equip-V1_Wield_Gear_Right_20.webp",
+      quantity: 3,
+      color: "#12ab34",
+      tag: "KEEP",
+      refine: 0,
+      lines: [],
+    },
+  };
+  expect(parseCollectorMessage(JSON.stringify(valid))).toEqual(valid);
+
+  for (const pickup of [
+    { ...valid.pickup, sequence: 0 },
+    { ...valid.pickup, name: "Abyss\nShard" },
+    { ...valid.pickup, icon: "../secret.webp" },
+    { ...valid.pickup, color: "rgb(1, 2, 3)" },
+    { ...valid.pickup, quantity: 2_147_483_648 },
+    { ...valid.pickup, tag: "x".repeat(65) },
+  ]) {
+    expect(parseCollectorMessage(JSON.stringify({ type: "pickup", pickup }))).toBeUndefined();
+  }
+});
+
 async function readCollectorMessage(stdout: ReadableStream<Uint8Array>): Promise<CollectorMessage | undefined> {
   const reader = stdout.getReader();
   const decoder = new TextDecoder();

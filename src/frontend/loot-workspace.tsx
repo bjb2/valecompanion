@@ -98,11 +98,12 @@ export function LootWorkspace({ state, connectionError, refreshState, onFindInMa
     return window.valeCompanion?.onAlert((name) => {
       if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,39}$/.test(name)) return;
       const audio = new Audio(`${apiRoot}/v1/sounds/${encodeURIComponent(name)}.wav`);
+      audio.volume = (state?.soundVolume ?? 100) / 100;
       void audio.play().catch((error) => {
         setActionError(`Alert sound could not be played: ${errorMessage(error)}`);
       });
     });
-  }, []);
+  }, [state?.soundVolume]);
 
   const inventory = surface === "storage" ? state?.storage : state?.bag;
   const selected = inventory?.find((item) => item.uid === selectedUid);

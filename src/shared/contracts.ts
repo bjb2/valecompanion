@@ -154,6 +154,7 @@ export interface DesktopState {
   version: string;
   enabled: boolean;
   soundsEnabled: boolean;
+  soundVolume: number;
   contributionEnabled: boolean;
   deviceName: string | null;
   linuxCaptureMode: LinuxCaptureMode;
@@ -204,6 +205,7 @@ export interface DesktopState {
 export interface DesktopSettingsUpdate {
   enabled?: boolean;
   soundsEnabled?: boolean;
+  soundVolume?: number;
   contributionEnabled?: boolean;
   deviceName?: string | null;
   linuxCaptureMode?: LinuxCaptureMode;
