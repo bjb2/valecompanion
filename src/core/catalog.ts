@@ -50,6 +50,17 @@ function capFor(kind: "equipment" | "artifact", group: string | undefined, stat:
   return values.size === 1 ? values.values().next().value : undefined;
 }
 
+export function printedSubstatValue(
+  kind: "equipment" | "artifact",
+  itemId: string,
+  stat: string,
+  roll: number,
+): number | undefined {
+  const group = kind === "artifact" ? "Artifact" : equipmentPools[itemId];
+  const cap = capFor(kind, group, stat);
+  return cap === undefined ? undefined : scaledValue(roll, cap);
+}
+
 function decodeLine(
   kind: "equipment" | "artifact",
   group: string | undefined,

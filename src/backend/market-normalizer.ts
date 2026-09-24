@@ -6,6 +6,7 @@ import {
   type FishNetMarketEvent,
   type FishNetMarketListing,
 } from "@kar-mi/spirit-vale-tools-market";
+import { printedSubstatValue } from "../core/catalog.ts";
 import {
   canonicalObservationPayload,
   sha256Hex,
@@ -48,17 +49,24 @@ export async function normalizeListing(
   if (!Number.isSafeInteger(listing.availableQuantity) || listing.availableQuantity < 0) throw new Error("market quantity is invalid");
   if (!Number.isSafeInteger(listing.status) || listing.status < 0) throw new Error("market status is invalid");
 
+  const itemType = catalogItemType(listing.item.itemType);
   const parsedStats = parseFishNetMarketStats(
     listing.item.payloadJson,
-    catalogItemType(listing.item.itemType),
+    itemType,
     listing.item.itemId,
   ) ?? [];
-  const stats: MarketUploadStat[] = parsedStats.map((stat) => ({
-    type: stat.type,
-    ...(stat.name === undefined ? {} : { name: stat.name }),
-    ...(stat.value === undefined ? {} : { value: stat.value }),
-    percent: stat.percent,
-  }));
+  const statKind = itemType === 2 ? "equipment" : itemType === 3 ? "artifact" : undefined;
+  const stats: MarketUploadStat[] = parsedStats.map((stat) => {
+    const value = stat.value ?? (statKind !== undefined && stat.name !== undefined
+      ? printedSubstatValue(statKind, listing.item.itemId!, stat.name, stat.roll)
+      : undefined);
+    return {
+      type: stat.type,
+      ...(stat.name === undefined ? {} : { name: stat.name }),
+      ...(value === undefined ? {} : { value }),
+      percent: stat.percent,
+    };
+  });
   const enhancements = parseMarketEnhancements(listing.item.payloadJson, listing.item.itemType);
   const observedAt = listing.updatedAt > 0n
     ? unixSecondsToIso(listing.updatedAt, "listing update")
