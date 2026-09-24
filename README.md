@@ -163,9 +163,11 @@ Profiles are named saved filter texts. You can create, duplicate, rename, and ac
 
 **Settings → Loot sounds → Alert volume** controls built-in and custom sounds from 0–100% and is saved across restarts. Existing installations start at 100%. Setting 0% mutes audio without suppressing loot history or visual notifications.
 
-Enable **Settings → Pickup overlay → On-screen pickups** for a transparent, always-on-top desktop overlay. Matching pickups show their icon, name, newly acquired quantity, and rule color/tag. Equipment and artifacts also show decoded substat values, roll percentages, Chaos markers, and refinement. The overlay shows up to five recent pickups, keeping fewer when expanded cards need more room; cards fade after five seconds. Hidden/unmatched items, the initial inventory baseline, and silent storage transfers do not produce notifications.
+**Settings → Pickup overlay → On-screen pickups** is enabled by default for a transparent, always-on-top desktop overlay. Matching pickups show their icon, name, newly acquired quantity, and rule color/tag. Equipment and artifacts also show decoded substat values, roll percentages, Chaos markers, and refinement. The overlay shows up to five recent pickups, keeping fewer when expanded cards need more room; cards fade after five seconds. Hidden/unmatched items, the initial inventory baseline, full character/map-load inventories, and silent storage transfers do not produce notifications. Subsequent pickup updates still notify normally.
 
 Choose **Reposition**, drag the overlay's header, then choose **Done** or **Lock position**. Locked overlays pass clicks through to the game. Position and enabled state are saved locally; **Reset position** returns it to the primary display. Borderless/windowed gameplay is recommended: exclusive fullscreen and Linux window-manager policies may prevent a desktop overlay from appearing above the game.
+
+The overlay starts enabled unless you previously turned it off; its saved on/off choice is respected. If the overlay renderer fails, **Reposition** recreates it without restarting the app.
 
 ## Gold analytics
 

@@ -25,6 +25,7 @@ export class PickupOverlayController {
   private overlayWindow: BrowserWindow | undefined;
   private applicationUrl = "";
   private rendererReady = false;
+  private rendererFailed = false;
   private pendingPickups: PickupNotification[] = [];
   private saveTimer: NodeJS.Timeout | undefined;
   private disposed = false;
@@ -122,7 +123,13 @@ export class PickupOverlayController {
 
   private async setEnabled(enabled: boolean): Promise<void> {
     if (this.smokeTest && enabled) throw new Error("Pickup overlay is disabled during the packaged smoke test.");
-    if (this.state.enabled === enabled) return;
+    if (this.state.enabled === enabled) {
+      if (enabled) {
+        const window = this.ensureOverlayWindow();
+        if (window && this.rendererReady) window.showInactive();
+      }
+      return;
+    }
     this.state = { enabled, repositioning: false };
     if (!enabled) {
       this.pendingPickups = [];
@@ -167,7 +174,12 @@ export class PickupOverlayController {
   private ensureOverlayWindow(): BrowserWindow | undefined {
     if (this.disposed || !this.applicationUrl) return undefined;
     const existing = this.overlayWindow;
-    if (existing && !existing.isDestroyed()) return existing;
+    if (existing && !existing.isDestroyed()) {
+      if (!this.rendererFailed) return existing;
+      this.overlayWindow = undefined;
+      existing.destroy();
+    }
+    this.rendererFailed = false;
     const bounds = this.initialBounds();
     const window = new BrowserWindow({
       x: bounds.x,
@@ -218,14 +230,23 @@ export class PickupOverlayController {
       event.preventDefault();
     });
     window.webContents.on("did-finish-load", () => {
+      if (this.overlayWindow !== window) return;
+      this.rendererFailed = false;
       this.publishState();
       if (this.state.enabled) window.showInactive();
     });
     window.webContents.on("did-fail-load", (_event, code, description, url) => {
+      if (this.overlayWindow === window) {
+        this.rendererReady = false;
+        this.rendererFailed = true;
+      }
       this.diagnostics.error("Pickup overlay failed to load", { code, description, url });
     });
     window.webContents.on("render-process-gone", (_event, details) => {
-      this.rendererReady = false;
+      if (this.overlayWindow === window) {
+        this.rendererReady = false;
+        this.rendererFailed = true;
+      }
       this.diagnostics.error("Pickup overlay renderer exited", { details });
     });
   }
@@ -237,6 +258,7 @@ export class PickupOverlayController {
     try {
       await window.loadURL(this.overlayUrl());
     } catch (error) {
+      if (this.overlayWindow === window) this.rendererFailed = true;
       this.diagnostics.error("Pickup overlay URL load rejected", { error: formatError(error) });
     }
   }
@@ -319,14 +341,14 @@ export class PickupOverlayController {
       const saved = JSON.parse(readFileSync(this.preferencesPath, "utf8")) as Record<string, unknown>;
       const bounds = saved.bounds;
       return {
-        enabled: saved.enabled === true,
+        enabled: saved.enabled !== false,
         ...(bounds && typeof bounds === "object" && Number.isSafeInteger((bounds as Record<string, unknown>).x)
           && Number.isSafeInteger((bounds as Record<string, unknown>).y)
           ? { bounds: { x: Number((bounds as Record<string, unknown>).x), y: Number((bounds as Record<string, unknown>).y) } }
           : {}),
       };
     } catch {
-      return { enabled: false };
+      return { enabled: true };
     }
   }
 

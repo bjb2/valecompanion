@@ -258,7 +258,7 @@ const fishNetDecoder = new FishNetCaptureDecoder({
     if (result.snapshot?.partial) partialSnapshots++;
     if (result.snapshot) {
       if (goldSession.consumeSnapshot(result.snapshot)) scheduleGoldSave();
-      session.consume(result.snapshot);
+      session.consume(result.snapshot, result.snapshotMode === "rebaseline");
     } else {
       session.consumeInventory(result.inventory!, false, true);
     }

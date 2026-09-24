@@ -7,7 +7,14 @@ const personalStorageRpcNames: Readonly<Record<string, true>> = {
   CompletePersonalStorageBatch: true,
   PlayerCallback_Storage: true,
 };
-export interface PacketConsumerResult { snapshot?: SaviSnapshot; inventory?: SaviInventory; storage?: SaviInventory; ignored: boolean; }
+export interface PacketConsumerResult {
+  snapshot?: SaviSnapshot;
+  /** LoadCharacter_T is a full map/character inventory rebaseline, not a pickup delta. */
+  snapshotMode?: "delta" | "rebaseline";
+  inventory?: SaviInventory;
+  storage?: SaviInventory;
+  ignored: boolean;
+}
 /** PacketCapture owns LiteNetLib fragmentation and FishNet split reassembly before this boundary. */
 export function consumeFishNetPacket(packet: CapturedFishNetPacket): PacketConsumerResult {
   if (packet.liteNetPacket.udpPacket.direction === "outbound") return { ignored: true };
@@ -15,6 +22,7 @@ export function consumeFishNetPacket(packet: CapturedFishNetPacket): PacketConsu
     try {
       return {
         snapshot: decodeCharacterData(packet.payload, { includesUpdateType: packet.rpcName === "CharacterCallback_T" }),
+        snapshotMode: packet.rpcName === "LoadCharacter_T" ? "rebaseline" : "delta",
         ignored: false,
       };
     } catch {
@@ -35,7 +43,7 @@ export function consumeFishNetPacket(packet: CapturedFishNetPacket): PacketConsu
   // RPC names come from a bundled build map and can be stale even on resolved links.
   // Validate character shape before discarding an otherwise unhandled named callback.
   const snapshot = identifyCharacterPayload(packet.payload);
-  if (snapshot) return { snapshot, ignored: false };
+  if (snapshot) return { snapshot, snapshotMode: "delta", ignored: false };
   if (packet.rpcName) return { ignored: true };
   const batch = decodePersonalStorageBatch(packet.payload);
   return batch ? { ...batch, ignored: false } : { ignored: true };

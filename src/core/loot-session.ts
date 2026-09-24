@@ -79,10 +79,10 @@ export class LootSession {
     this.#history.length = 0;
   }
 
-  consume(snapshot: SaviSnapshot): SnapshotResult {
+  consume(snapshot: SaviSnapshot, silent = this.options.silent ?? false): SnapshotResult {
     const inventory = snapshot.inventory;
     if (!inventory) return { added: [], baseline: !this.#baseline, partial: true };
-    return this.consumeInventory(inventory, snapshot.partial);
+    return this.consumeInventory(inventory, snapshot.partial, silent);
   }
 
   consumeInventory(inventory: SaviInventory, partial = false, silent = this.options.silent ?? false): SnapshotResult {
