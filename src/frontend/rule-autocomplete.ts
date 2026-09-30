@@ -1,3 +1,4 @@
+import type { ItemCatalog } from "../shared/item-catalog.ts";
 import { STAT_LABEL } from "../shared/stat-labels.ts";
 
 export type CompletionKind =
@@ -35,11 +36,6 @@ export interface RuleVocabulary {
   readonly items: readonly string[];
   readonly types: readonly string[];
   readonly sounds: readonly string[];
-}
-
-interface CatalogEntry {
-  readonly name?: unknown;
-  readonly slot?: unknown;
 }
 
 const KEYWORDS: readonly RuleCompletion[] = [
@@ -109,9 +105,11 @@ export function catalogVocabulary(catalog: unknown, sounds: readonly string[]): 
   const items = new Set<string>();
   const types = new Set<string>(ARTIFACT_TYPES);
   if (catalog && typeof catalog === "object") {
-    for (const entry of Object.values(catalog as Record<string, CatalogEntry>)) {
+    for (const entry of Object.values(catalog as Partial<ItemCatalog>)) {
+      if (!entry) continue;
       if (typeof entry.name === "string" && entry.name) items.add(entry.name);
       if (typeof entry.slot === "string" && entry.slot) types.add(entry.slot);
+      else if (typeof entry.kind === "string" && entry.kind) types.add(entry.kind);
     }
   }
   return {

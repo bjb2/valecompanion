@@ -68,6 +68,7 @@ Vale Companion maintains a live view of the character bag from authoritative ser
 - Equipment and artifacts, including substats, roll percentages, chaos lines, refinement, and favorites
 - Gems and refinement levels
 - Cards and stack quantities
+- Materials, consumables (including Box of Mastery), and cosmetics, with category-specific names and artwork
 - Additions and removals caused by drops, sales, dismantling, and personal-storage transfers
 
 Loot alerts run when a complete inventory update arrives, not on a town-entry timer. Fragmented updates are reassembled across UDP datagrams even when their fragments occupy different merged-envelope positions. Character-shaped updates are also checked when an otherwise unhandled RPC name comes from an outdated bundled map. The first observed inventory seeds the bag silently; subsequent matching additions alert once, and an unchanged map-entry snapshot does not repeat them.
@@ -232,6 +233,21 @@ bun run build         Prepare the Electron application
 bun run package:win   Build Windows installer and portable executable; smoke-test portable
 bun run package:linux Build Linux AppImage, deb, and rpm artifacts
 ```
+
+### Refreshing item data
+
+Loot, rule autocomplete, and Market share the bundled `assets/catalog.json`. Refresh it and its artwork from SpiritValers' published, released-item exports before a release:
+
+```sh
+bun run sync:catalog
+# Or use a local checkout of the same deployed site:
+bun run sync:catalog ../spiritvale-deploy
+bun run check
+```
+
+The command imports equipment (including grimoires), cards, gems, artifact sets and their four pieces, materials, consumables, and released cosmetics. It preserves additional cosmetic identities from `assets/cosmetics.json`, which is a generator input rather than a second runtime catalog. Published cosmetic entries override that supplement.
+
+Catalog addresses include category and internal item ID; artifact pieces also include their slot. This keeps shared IDs such as Mushroom material and Shroom Card separate in loot, market listings, and valuation. Names and filterable types are suggested from the same generated data. Refreshes validate source entries and referenced WebP artwork before writing, report added/removed/changed entries, and can be reviewed and committed with the release. Normal builds and installed applications use the committed data offline; they do not refresh the catalog at startup.
 
 ## Project layout
 

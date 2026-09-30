@@ -37,11 +37,19 @@ describe("bagSignature", () => {
 describe("marketOpenRequest", () => {
   test("encodes the item, artifact slot, and stat lines as a market URL query", () => {
     const request = marketOpenRequest(item({ lines: [line("Str", 3), line("Crit", null), line("Luk", 9, true)] }));
-    expect(request).toEqual({ type: "valecompanion:market-open", search: "item=Corporeal&slot=Rune&stats=Str%3A3%2CCrit", name: "Corporeal Rune" });
+    expect(request).toEqual({ type: "valecompanion:market-open", search: "item=Artifact%3ACorporeal&slot=Rune&stats=Str%3A3%2CCrit", name: "Corporeal Rune" });
   });
 
   test("omits the slot for equipment and the stats when none decoded", () => {
     const request = marketOpenRequest(item({ kind: "equipment", type: "Chest", itemId: "Mage Plate", name: "", lines: [] }));
-    expect(request).toEqual({ type: "valecompanion:market-open", search: "item=Mage+Plate", name: "Mage Plate" });
+    expect(request).toEqual({ type: "valecompanion:market-open", search: "item=Equipment%3AMage+Plate", name: "Mage Plate" });
+  });
+
+  test("keeps material and card market destinations distinct for the same item ID", () => {
+    const material = marketOpenRequest(item({ itemId: "Mushroom", kind: "material", type: "Material", lines: [] }));
+    const card = marketOpenRequest(item({ itemId: "Mushroom", kind: "card", type: "Card", lines: [] }));
+    if (material.type !== "valecompanion:market-open" || card.type !== "valecompanion:market-open") throw new Error("Expected market navigation");
+    expect(new URLSearchParams(material.search).get("item")).toBe("Material:Mushroom");
+    expect(new URLSearchParams(card.search).get("item")).toBe("Card:Mushroom");
   });
 });

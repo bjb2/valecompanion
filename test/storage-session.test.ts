@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { priceItem } from "../src/core/market-value.ts";
 import { LootSession } from "../src/core/loot-session.ts";
 import type { SaviInventory } from "../src/core/types.ts";
+import type { ItemCatalog } from "../src/shared/item-catalog.ts";
 
 const empty = (): SaviInventory => ({ equips: [], artifacts: [], cards: [], gems: [], junks: [], consumables: [], cosmetics: [] });
 const card = (count: number) => ({ itemId: "Abomination", count, favorite: false });
@@ -61,19 +62,38 @@ test("shared item IDs retain category-specific card and cosmetic identities", ()
     const card = session.bag().find(item => item.kind === "card")!;
     const pet = session.bag().find(item => item.kind === "cosmetic")!;
     expect(card.name).toBe("Turtle Baby Card");
-    expect(card.icon).toBe("card.webp");
+    expect(card.icon).toBe("published-content-game-icons-card.webp");
     expect(pet.name).toBe("Turtle Baby Pet");
     expect(pet.icon).toBe("cosmetic-turtle.webp");
     expect(pet.uid).not.toBe(card.uid);
   }
 });
 
+test("shared equipment and cosmetic IDs use their category-specific catalog entries", () => {
+  const session = new LootSession();
+  session.consumeInventory({ ...empty(),
+    equips: [{
+      slot: -1, uid: "weapon-uid", itemId: "Abyss Shard", refine: 0, cards: [], substats: [],
+      startingPotential: 0, spentPotential: 0, chaosType: -1, favorite: false,
+    }],
+    cosmetics: [{ itemId: "Abyss Shard", uid: "cosmetic-uid", refine: 0, favorite: false }],
+  });
 
-test("bundled cosmetic artwork exists and never uses card artwork", async () => {
-  const catalog = await Bun.file(new URL("../assets/cosmetics.json", import.meta.url)).json() as Record<string, { icon?: string }>;
-  for (const entry of Object.values(catalog)) {
-    if (!entry.icon) continue;
-    expect(entry.icon.startsWith("icons/cosmetic-")).toBe(true);
-    expect(await Bun.file(new URL(`../assets/${entry.icon}`, import.meta.url)).exists()).toBe(true);
+  expect(session.bag().find((item) => item.kind === "equipment")).toMatchObject({
+    name: "Abyss Shard", icon: "published-content-game-icons-equip-v1_wield_gear_right_20.webp",
+  });
+  expect(session.bag().find((item) => item.kind === "cosmetic")).toMatchObject({
+    name: "Abyss Shard", icon: "cosmetic-abyss-shard.webp",
+  });
+});
+
+
+test("unified catalog preserves supplementary cosmetic identities and local artwork", async () => {
+  const catalog = await Bun.file(new URL("../assets/catalog.json", import.meta.url)).json() as ItemCatalog;
+  const cosmetics = Object.values(catalog).filter((entry) => entry.kind === "Cosmetic");
+  const turtle = cosmetics.find((entry) => entry.id === "Turtle");
+  expect(turtle).toMatchObject({ name: "Turtle Baby Pet", icon: "icons/cosmetic-turtle.webp", slot: "Cosmetic" });
+  for (const entry of cosmetics) {
+    if (entry.icon) expect(await Bun.file(new URL(`../assets/${entry.icon}`, import.meta.url)).exists()).toBe(true);
   }
 });

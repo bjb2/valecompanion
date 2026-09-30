@@ -24,3 +24,8 @@ Run `bun install` in that source checkout to retrieve the pinned package sources
 from the Bun/npm registry. Npcap, libpcap, and dumpcap are not included in this
 release; obtain them and their licenses separately from the operating-system
 vendor or upstream project.
+
+Bundled item names, categories, wiki links, and published artwork are refreshed
+from https://spiritvalers.com through src/sync-catalog.ts. Supplemental cosmetic
+definitions and artwork are preserved in assets/cosmetics.json and assets/icons.
+Spirit Vale game artwork remains the property of its respective rights holders.

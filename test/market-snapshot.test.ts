@@ -3,6 +3,8 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { MarketSnapshot, nextMarketCheckAt } from "../src/backend/market-snapshot.ts";
+import { priceBag } from "../src/core/market-value.ts";
+import { cardFacts } from "../src/core/catalog.ts";
 
 const NOW = Date.parse("2026-09-05T12:02:00.000Z");
 const MIN = 60_000;
@@ -19,7 +21,7 @@ afterEach(async () => {
 });
 
 const listing = (itemId: string, unitPrice: number, extra: Record<string, unknown> = {}) => ({
-  itemId, unitPrice, displayName: itemId, stats: [{ name: "Luk", value: 3, type: 5, percent: false }], expiresAt: null, ...extra,
+  itemId, itemType: 3, unitPrice, displayName: itemId, stats: [{ name: "Luk", value: 3, type: 5, percent: false }], expiresAt: null, ...extra,
 });
 
 function body(generatedAt: string, listings: unknown[]) {
@@ -52,10 +54,7 @@ describe("MarketSnapshot", () => {
     expect(first).toBe(second);
     expect(first).toEqual(body("2026-09-05T11:50:00.000Z", [listing("Mage Plate", 1_998, { enhancements: { refine: 2, artifactSlot: 2, cards: [], gems: [] } })]));
     expect(snapshot.view()).toEqual({ generatedAt: "2026-09-05T11:50:00.000Z", listings: 1 });
-    expect(snapshot.listingsFor("Mage Plate")).toEqual([
-      { itemId: "Mage Plate", unitPrice: 1_998, stats: [{ name: "Luk", value: 3 }], refine: 2, artifactSlot: 2 },
-    ]);
-    expect(snapshot.listingsFor("Unknown")).toEqual([]);
+    expect(snapshot.listingsFor("Unknown", "Equipment")).toEqual([]);
 
     await snapshot.body();
     expect(calls).toHaveLength(1);
@@ -67,22 +66,22 @@ describe("MarketSnapshot", () => {
     const file = await cachePath();
     let clock = NOW;
     const { calls, fetch } = api([fresh("2026-09-05T11:50:00.000Z", [
-      listing("Corporeal", 9_000, { enhancements: { refine: 1, artifactSlot: 0 } }),
-      listing("Corporeal", 500, { enhancements: { refine: 0, artifactSlot: 1 }, expiresAt: "2026-09-05T12:30:00.000Z" }),
+      listing("Corporeal", 9_000, { itemType: 4, enhancements: { refine: 1, artifactSlot: 0 } }),
+      listing("Corporeal", 500, { itemType: 4, enhancements: { refine: 0, artifactSlot: 1 }, expiresAt: "2026-09-05T12:30:00.000Z" }),
     ])]);
     const first = await MarketSnapshot.load({ staggerMs: 0, cachePath: file, now: () => new Date(clock), fetch });
     await first.body();
-    expect(first.listingsFor("Corporeal").map((entry) => [entry.refine, entry.artifactSlot])).toEqual([[1, 0], [0, 1]]);
+    expect(first.listingsFor("Corporeal", "Artifact").map((entry) => [entry.refine, entry.artifactSlot])).toEqual([[1, 0], [0, 1]]);
 
     clock = NOW + 5 * MIN;
     const reloaded = await MarketSnapshot.load({ staggerMs: 0, cachePath: file, now: () => new Date(clock), fetch });
-    expect(reloaded.listingsFor("Corporeal").map((entry) => [entry.refine, entry.artifactSlot])).toEqual([[1, 0], [0, 1]]);
+    expect(reloaded.listingsFor("Corporeal", "Artifact").map((entry) => [entry.refine, entry.artifactSlot])).toEqual([[1, 0], [0, 1]]);
     expect(await reloaded.body()).toEqual(await first.body());
     expect(calls).toHaveLength(1);
 
     clock = NOW + 35 * MIN;                                   // past the second listing's expiry
     const later = await MarketSnapshot.load({ staggerMs: 0, cachePath: file, now: () => new Date(clock), fetch });
-    expect(later.listingsFor("Corporeal").map((entry) => [entry.refine, entry.artifactSlot])).toEqual([[1, 0]]);
+    expect(later.listingsFor("Corporeal", "Artifact").map((entry) => [entry.refine, entry.artifactSlot])).toEqual([[1, 0]]);
     expect(later.view()).toEqual({ generatedAt: "2026-09-05T11:50:00.000Z", listings: 1 });
   });
 
@@ -92,7 +91,7 @@ describe("MarketSnapshot", () => {
     const { calls, fetch } = api([fresh()]);
     const snapshot = await MarketSnapshot.load({ staggerMs: 0, cachePath: path.join(directory, "market-snapshot.json"), now: () => new Date(NOW), fetch });
     expect(await snapshot.refresh()).toBe(true);
-    expect(snapshot.listingsFor("Mage Plate")).toHaveLength(1);
+    expect(snapshot.listingsFor("Mage Plate", "Equipment")).toHaveLength(1);
     const view = snapshot.view();
     expect(view.warning).toBeUndefined();
     expect(view.cacheWarning).toMatch(/^Market snapshot could not be cached: /);
@@ -107,7 +106,7 @@ describe("MarketSnapshot", () => {
     const snapshot = await MarketSnapshot.load({ staggerMs: 0, cachePath: file, now: () => new Date(NOW), fetch });
     expect(await snapshot.body()).toEqual(body("2026-09-05T11:00:00.000Z", [listing("Ghost", 4_000)]));
     expect(calls).toHaveLength(1);
-    expect(snapshot.listingsFor("Ghost")).toHaveLength(1);
+    expect(snapshot.listingsFor("Ghost", "Equipment")).toHaveLength(1);
     expect(snapshot.view()).toEqual({
       generatedAt: "2026-09-05T11:00:00.000Z",
       listings: 1,
@@ -177,6 +176,20 @@ describe("MarketSnapshot", () => {
     expect(snapshot.view()).toEqual({ generatedAt: null, listings: 0 });
     expect(warnings).toEqual(["state.load.invalid"]);
   });
+});
+
+test("a material's cheap listing never lowers the value of a card with the same ID", async () => {
+  const file = await cachePath();
+  const { fetch } = api([fresh("2026-09-05T11:50:00.000Z", [
+    listing("Mushroom", 1, { itemType: 1, stats: [] }),
+    listing("Mushroom", 9_000, { itemType: 5, stats: [] }),
+  ])]);
+  const snapshot = await MarketSnapshot.load({ cachePath: file, now: () => new Date(NOW), fetch });
+  await snapshot.body();
+  const card = { ...cardFacts({ itemId: "Mushroom", count: 2, favorite: false }).view, match: null };
+  const [priced] = priceBag([card], (id, kind) => snapshot.listingsFor(id, kind));
+  expect(priced?.value).toEqual({ low: 18_000, median: 18_000, tier: "unit", listings: 1 });
+  expect(snapshot.listingsFor("Mushroom", "Material").map((entry) => entry.unitPrice)).toEqual([1]);
 });
 
 

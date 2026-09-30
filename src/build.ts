@@ -23,6 +23,7 @@ await Promise.all([
 await Promise.all([
   bundle(path.join(root, "src", "frontend", "index.tsx"), rendererOutput, "browser", "esm", "index.[ext]"),
   bundle(path.join(root, "src", "frontend", "pickup-overlay.tsx"), rendererOutput, "browser", "esm", "pickup-overlay.[ext]"),
+  bundle(path.join(root, "src", "shared", "item-catalog.ts"), rendererOutput, "browser", "esm", "item-catalog.[ext]"),
   bundle(path.join(root, "src", "backend", "index.ts"), collectorOutput, "bun", "esm", "index.[ext]"),
   bundle(path.join(root, "src", "electron", "main.ts"), electronOutput, "node", "esm", "main.[ext]", ["electron", "electron-updater"]),
   bundle(path.join(root, "src", "electron", "preload.ts"), electronOutput, "node", "cjs", "preload.cjs", ["electron"]),
@@ -37,7 +38,6 @@ await Promise.all([
   cp(path.join(root, "assets", "fonts"), path.join(rendererOutput, "fonts"), { recursive: true }),
   copyFile(path.join(root, "src", "frontend", "index.css"), path.join(rendererOutput, "index.css")),
   copyFile(path.join(root, "assets", "catalog.json"), path.join(collectorOutput, "catalog.json")),
-  copyFile(path.join(root, "assets", "cosmetics.json"), path.join(collectorOutput, "cosmetics.json")),
   copyFile(path.join(root, "docs", "starter-ruleset.txt"), path.join(collectorOutput, "starter-ruleset.txt")),
   cp(path.join(root, "assets", "icons"), path.join(collectorOutput, "icons"), { recursive: true }),
   copyFile(process.execPath, runtimeOutput),

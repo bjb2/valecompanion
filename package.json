@@ -1,6 +1,6 @@
 {
   "name": "valecompanion",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "private": true,
   "description": "Unified passive companion for Spirit Vale",
   "homepage": "https://github.com/bjb2/valecompanion",
@@ -16,6 +16,7 @@
     "prepare": "bun run src/build.ts",
     "dev": "bun run prepare && electron .",
     "build": "bun run prepare",
+    "sync:catalog": "bun run src/sync-catalog.ts",
     "package": "bun run prepare && electron-builder --publish never",
     "package:win": "bun run prepare && electron-builder --win nsis portable --x64 --publish never && bun run smoke:package:win",
     "smoke:package:win": "bun run src/smoke-packaged-win.ts",

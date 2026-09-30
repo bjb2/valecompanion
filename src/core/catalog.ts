@@ -3,17 +3,10 @@ import path from "node:path";
 import { resolveFishNetItem } from "@kar-mi/spirit-vale-tools-items";
 import { fishNetMarketStatName } from "@kar-mi/spirit-vale-tools-market";
 import substatPools from "../../assets/substat-pools.json";
+import { catalogKey, LOOT_CATALOG_KINDS, type CatalogKind, type CatalogEntry, type ItemCatalog } from "../shared/item-catalog.ts";
 import type { LootItemView, LootLine } from "../shared/contracts.ts";
 import type { OwnedGear, RollLine } from "./filter/types.ts";
 import { ARTIFACT_SLOT_NAMES, type SaviArtifact, type SaviEquip, type SaviGem, type SaviStack, type SaviSubstat } from "./types.ts";
-
-type CatalogEntry = {
-  name: string;
-  icon?: string;
-  kind: string;
-  section?: string | null;
-  slot?: string | null;
-};
 
 type DecodedLine = LootLine & { top: boolean };
 type Facts = OwnedGear & { view: Omit<LootItemView, "match"> };
@@ -21,8 +14,11 @@ type Facts = OwnedGear & { view: Omit<LootItemView, "match"> };
 const catalogPath = existsSync(path.join(import.meta.dir, "catalog.json"))
   ? path.join(import.meta.dir, "catalog.json")
   : path.join(import.meta.dir, "../../assets/catalog.json");
-const exactCatalog = JSON.parse(readFileSync(catalogPath, "utf8")) as Record<string, CatalogEntry>;
-const cosmeticCatalog = JSON.parse(readFileSync(path.join(path.dirname(catalogPath), "cosmetics.json"), "utf8")) as Record<string, CatalogEntry>;
+const exactCatalog = JSON.parse(readFileSync(catalogPath, "utf8")) as ItemCatalog;
+
+function catalogEntry(kind: CatalogKind, itemId: string, artifactSlot?: string): CatalogEntry | undefined {
+  return exactCatalog[catalogKey(kind, itemId, artifactSlot)];
+}
 const attributeStats: Readonly<Record<string, true>> = { Str: true, Vit: true, Agi: true, Dex: true, Int: true, Luk: true };
 // Build-scoped game data, including explicit item overrides and compiled defaults.
 // Imported JSON is bundled into the collector; no runtime asset lookup is needed.
@@ -87,10 +83,11 @@ function makeFacts(
   item: SaviEquip | SaviArtifact,
   highRollThreshold: number,
 ): Facts {
-  const baseExact = exactCatalog[item.itemId];
+  const catalogKind = kind === "equipment" ? "Equipment" : "Artifact";
+  const baseExact = catalogEntry(catalogKind, item.itemId);
   const artifactSlot = kind === "artifact" ? ARTIFACT_SLOT_NAMES[item.slot] : undefined;
-  const exact = kind === "artifact" && baseExact && artifactSlot
-    ? exactCatalog[`${baseExact.name} ${artifactSlot}`] ?? baseExact
+  const exact = kind === "artifact" && artifactSlot
+    ? catalogEntry("Artifact", item.itemId, artifactSlot) ?? baseExact
     : baseExact;
   const definition = resolveFishNetItem(kind === "equipment" ? 2 : 3, item.itemId);
   const group = kind === "artifact" ? "Artifact" : equipmentPools[item.itemId];
@@ -164,7 +161,7 @@ export function artifactFacts(item: SaviArtifact, highRollThreshold = 90): Facts
 }
 
 export function gemFacts(item: SaviGem): Facts {
-  const exact = exactCatalog[item.itemId];
+  const exact = catalogEntry("Gem", item.itemId);
   const definition = resolveFishNetItem(5, item.itemId);
   const uid = item.uid ?? `${item.itemId}:gem`;
   const name = exact?.name ?? definition?.displayName ?? item.itemId;
@@ -201,9 +198,10 @@ export function gemFacts(item: SaviGem): Facts {
 }
 
 export function cardFacts(item: SaviStack): Facts {
-  const exact = exactCatalog[item.itemId];
+  const exact = catalogEntry("Card", item.itemId);
+  const definition = resolveFishNetItem(4, item.itemId);
   const uid = `${item.itemId}:card`;
-  const name = exact?.name ?? item.itemId;
+  const name = exact?.name ?? definition?.displayName ?? item.itemId;
   return {
     uid,
     itemId: item.itemId,
@@ -216,7 +214,7 @@ export function cardFacts(item: SaviStack): Facts {
     avgRollPct: null,
     favorite: item.favorite,
     hasChaos: false,
-    ...(exact ? {} : { unknown: true as const }),
+    ...(exact || definition ? {} : { unknown: true as const }),
     view: {
       uid,
       itemId: item.itemId,
@@ -236,8 +234,7 @@ export function cardFacts(item: SaviStack): Facts {
   };
 }
 
-// Item IDs overlap across game categories (for example Turtle is both a card and a pet).
-// Only use artwork from a catalog entry whose category matches the wire inventory.
+// Catalog keys include the wire category because IDs overlap across inventory types.
 export function stackFacts(item: SaviStack, kind: "material" | "consumable"): Facts {
   return simpleInventoryFacts(item, kind);
 }
@@ -247,10 +244,9 @@ export function cosmeticFacts(item: SaviGem): Facts {
 }
 
 function simpleInventoryFacts(item: SaviStack & { uid?: string | null; refine?: number }, kind: "material" | "consumable" | "cosmetic"): Facts {
-  const type = { material: "Material", consumable: "Consumable", cosmetic: "Cosmetic" }[kind];
+  const type = LOOT_CATALOG_KINDS[kind];
   const itemType = { material: 0, consumable: 1, cosmetic: 6 }[kind];
-  const entry = kind === "cosmetic" ? cosmeticCatalog[item.itemId] : exactCatalog[item.itemId];
-  const exact = entry?.kind === type ? entry : undefined;
+  const exact = catalogEntry(type, item.itemId);
   const definition = resolveFishNetItem(itemType, item.itemId);
   const name = exact?.name ?? definition?.displayName ?? item.itemId;
   const uid = item.uid ?? `${item.itemId}:${kind}`;

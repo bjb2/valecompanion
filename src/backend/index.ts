@@ -601,8 +601,8 @@ function currentState(): DesktopState {
     market: marketContributor.snapshot(),
     marketPrices: marketSnapshot.view(),
     gold: goldSession.snapshot(),
-    bag: priceBag(session.bag(), (itemId) => marketSnapshot.listingsFor(itemId)),
-    storage: priceBag(storageSession.bag(), (itemId) => marketSnapshot.listingsFor(itemId)),
+    bag: priceBag(session.bag(), (itemId, kind) => marketSnapshot.listingsFor(itemId, kind)),
+    storage: priceBag(storageSession.bag(), (itemId, kind) => marketSnapshot.listingsFor(itemId, kind)),
     storageGeneratedAt,
     bagGeneratedAt,
     bagCoverage,
@@ -660,8 +660,8 @@ async function routeRequest(request: Request): Promise<Response> {
         ? { filename: "market.html", contentType: "text/html; charset=utf-8" }
         : route === "/catalog.json"
           ? { filename: "catalog.json", contentType: "application/json; charset=utf-8" }
-          : route === "/index.js"
-            ? { filename: "index.js", contentType: "text/javascript; charset=utf-8" }
+          : route === "/index.js" || route === "/item-catalog.js"
+            ? { filename: route.slice(1), contentType: "text/javascript; charset=utf-8" }
             : route === "/index.css"
               ? { filename: "index.css", contentType: "text/css; charset=utf-8" }
               : route === "/pickup-overlay.html"

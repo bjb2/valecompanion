@@ -421,6 +421,7 @@ header{
   </aside>
 </div>
 <script type="module">
+import { catalogKey, LOOT_CATALOG_KINDS, MARKET_CATALOG_KINDS } from "./item-catalog.js";
 const API = "https://market-api.spiritvalers.com";
 const KINDS = [
   { id: "All", label: "All" },
@@ -430,6 +431,7 @@ const KINDS = [
   { id: "Artifact", label: "Artifacts" },
   { id: "Material", label: "Materials" },
   { id: "Consumable", label: "Consumables" },
+  { id: "Cosmetic", label: "Cosmetics" },
 ];
 const SORTS = [
   { id: "seen", label: "Seen" },
@@ -711,7 +713,7 @@ async function ensurePriceHistory(item) {
   } catch {
     state.priceHistory.set(key, { status: "error" });
   }
-  if (state.open === item.id) renderInspector();
+  if (state.open === item.key) renderInspector();
 }
 
 function priceDepthOf(variants) {
@@ -1040,9 +1042,10 @@ let pendingOpen = null;
 function receiveBag(bag) {
   bagByItem = new Map();
   for (const item of bag) {
-    const group = bagByItem.get(item.itemId) || [];
+    const key = catalogKey(LOOT_CATALOG_KINDS[item.kind], item.itemId);
+    const group = bagByItem.get(key) || [];
     group.push(item);
-    bagByItem.set(item.itemId, group);
+    bagByItem.set(key, group);
   }
   if (state.items.length) {
     renderList();
@@ -1092,7 +1095,7 @@ function bagCopyRow(item, copy) {
 }
 
 function bagSection(item, view) {
-  const copies = bagByItem.get(item.id) || [];
+  const copies = bagByItem.get(item.key) || [];
   if (copies.length === 0) return "";
   if (item.fungible) {
     const units = unitsOf(copies);
@@ -1195,7 +1198,8 @@ function initials(name) {
 }
 
 function catalogOf(id, listing) {
-  const known = state.catalog[id];
+  const kind = MARKET_CATALOG_KINDS[listing?.itemType];
+  const known = kind ? state.catalog[catalogKey(kind, id)] : undefined;
   if (known) return known;
   if (listing?.itemType === 5) {
     return {
@@ -1205,7 +1209,7 @@ function catalogOf(id, listing) {
       wiki: null,
     };
   }
-  return { name: listing?.displayName || id, kind: "Other", icon: null, wiki: null };
+  return { name: listing?.displayName || id, kind: kind || "Other", icon: null, wiki: null };
 }
 
 function slotLabel(slot) {
@@ -1606,9 +1610,9 @@ function renderList() {
     const count = item.fungible
       ? `${view.listingCount} listings · ${view.unitCount.toLocaleString()} units`
       : `${view.listingCount} seen`;
-    const owned = unitsOf(bagByItem.get(item.id) || []);
+    const owned = unitsOf(bagByItem.get(item.key) || []);
     return `
-      <button type="button" class="row${state.open === item.id ? " on" : ""}" data-id="${escapeHtml(item.id)}">
+      <button type="button" class="row${state.open === item.key ? " on" : ""}" data-id="${escapeHtml(item.key)}">
         <div class="ic">${iconHTML(item)}</div>
         <div class="name">
           <span class="cn">${escapeHtml(item.name)}</span>
@@ -2024,7 +2028,7 @@ async function load(refreshSnapshot = false) {
   $("q").value = state.query;
   try {
     const [catalog, snapshot, statFingerprints] = await Promise.all([
-      fetch("catalog.json?v=v2").then((response) => {
+      fetch("catalog.json").then((response) => {
         if (!response.ok) throw new Error(`catalog ${response.status}`);
         return response.json();
       }),
@@ -2047,16 +2051,18 @@ async function load(refreshSnapshot = false) {
     const { listings, generatedAt } = snapshot;
     const groups = new Map();
     for (const listing of listings) {
-      const group = groups.get(listing.itemId) || [];
+      const key = `${listing.itemType}:${listing.itemId}`;
+      const group = groups.get(key) || [];
       group.push(listing);
-      groups.set(listing.itemId, group);
+      groups.set(key, group);
     }
     state.manifest = {
       date: generatedAt.slice(0, 10),
       generatedAt,
       totals: { listings: listings.length, items: groups.size },
     };
-    state.items = [...groups.entries()].map(([itemId, rows]) => {
+    state.items = [...groups.values()].map((rows) => {
+      const itemId = rows[0].itemId;
       const meta = catalogOf(itemId, rows[0]);
       const variants = rows.map(publicVariant).sort((left, right) =>
         (right.lastSeenAt || "").localeCompare(left.lastSeenAt || "") || left.low - right.low);
@@ -2068,6 +2074,7 @@ async function load(refreshSnapshot = false) {
         variant.lastSeenAt > newest ? variant.lastSeenAt : newest, "");
       const item = {
         id: itemId,
+        key: catalogKey(meta.kind, itemId),
         itemType: rows[0].itemType,
         name: rows.find((row) => row.displayName)?.displayName || meta.name,
         kind: meta.kind,
@@ -2092,7 +2099,7 @@ async function load(refreshSnapshot = false) {
       ].filter(Boolean).join(" ").toLowerCase();
       return item;
     });
-    state.byId = new Map(state.items.map((item) => [item.id, item]));
+    state.byId = new Map(state.items.map((item) => [item.key, item]));
     if (state.open && !state.byId.has(state.open)) state.open = null;
     renderMeta();
     render();

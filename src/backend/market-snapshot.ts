@@ -4,6 +4,7 @@ import type { MarketPricesView } from "../shared/contracts.ts";
 import { MARKET_API_URL } from "./market-contracts.ts";
 import { errorLogFields, type AppLogger } from "./market-logger.ts";
 import { errorMessage, isRecord, loadJson, writeJsonAtomic } from "./market-storage.ts";
+import { catalogKey, MARKET_CATALOG_KINDS, type CatalogKind } from "../shared/item-catalog.ts";
 
 const REFRESH_INTERVAL_MS = 10 * 60 * 1_000;
 const RETRY_INTERVAL_MS = 2 * 60 * 1_000;
@@ -19,7 +20,7 @@ interface SnapshotState {
   etag?: string;
   generatedAt: string;
   body: Record<string, unknown>;
-  listings: MarketListing[];
+  listings: Array<MarketListing & { kind: CatalogKind }>;
 }
 
 export interface MarketSnapshotOptions {
@@ -65,8 +66,8 @@ export class MarketSnapshot {
     return new MarketSnapshot(options, state);
   }
 
-  listingsFor(itemId: string): MarketListing[] {
-    return this.byItem.get(itemId) ?? [];
+  listingsFor(itemId: string, kind: CatalogKind): MarketListing[] {
+    return this.byItem.get(catalogKey(kind, itemId)) ?? [];
   }
 
   view(): MarketPricesView {
@@ -192,9 +193,10 @@ export class MarketSnapshot {
   private index(): void {
     this.byItem = new Map();
     for (const listing of this.state?.listings ?? []) {
-      const group = this.byItem.get(listing.itemId) ?? [];
+      const key = catalogKey(listing.kind, listing.itemId);
+      const group = this.byItem.get(key) ?? [];
       group.push(listing);
-      this.byItem.set(listing.itemId, group);
+      this.byItem.set(key, group);
     }
   }
 }
@@ -214,7 +216,7 @@ function parseBody(value: unknown, now: number): Omit<SnapshotState, "fetchedAt"
     if (!snapshotRevision(value)) return null;
     validateSyncListings(value.listings);
   }
-  const listings: MarketListing[] = [];
+  const listings: SnapshotState["listings"] = [];
   for (const entry of value.listings) {
     const listing = parseListing(entry, now);
     if (listing) listings.push(listing);
@@ -222,8 +224,11 @@ function parseBody(value: unknown, now: number): Omit<SnapshotState, "fetchedAt"
   return { generatedAt: value.generatedAt, body: value, listings };
 }
 
-function parseListing(value: unknown, now: number): MarketListing | null {
+function parseListing(value: unknown, now: number): (MarketListing & { kind: CatalogKind }) | null {
   if (!isRecord(value) || typeof value.itemId !== "string" || typeof value.unitPrice !== "number" || !Array.isArray(value.stats)) return null;
+  const kind = typeof value.itemType === "number"
+    ? MARKET_CATALOG_KINDS[value.itemType as keyof typeof MARKET_CATALOG_KINDS] : undefined;
+  if (!kind) return null;
   if (typeof value.expiresAt === "string" && Date.parse(value.expiresAt) <= now) return null;
   const stats: MarketListing["stats"] = [];
   for (const stat of value.stats) {
@@ -231,6 +236,7 @@ function parseListing(value: unknown, now: number): MarketListing | null {
   }
   const enhancements = isRecord(value.enhancements) ? value.enhancements : {};
   return {
+    kind,
     itemId: value.itemId,
     unitPrice: value.unitPrice,
     stats,

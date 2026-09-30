@@ -1,11 +1,12 @@
 import type { LootItemView } from "../shared/contracts.ts";
+import { catalogKey, LOOT_CATALOG_KINDS } from "../shared/item-catalog.ts";
 
 export type MarketBridgeMessage =
   | { type: "valecompanion:market-open"; search: string; name: string }
   | { type: "valecompanion:bag"; bag: LootItemView[] };
 
 export function marketOpenRequest(item: LootItemView): MarketBridgeMessage {
-  const params = new URLSearchParams({ item: item.itemId });
+  const params = new URLSearchParams({ item: catalogKey(LOOT_CATALOG_KINDS[item.kind], item.itemId) });
   if (item.kind === "artifact") params.set("slot", item.type);
   const stats = item.lines
     .filter((line) => !line.isChaos)

@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { artifactFacts, equipmentFacts } from "../src/core/catalog.ts";
+import { artifactFacts, cardFacts, equipmentFacts, stackFacts } from "../src/core/catalog.ts";
 import { explainCondition, matchLoot } from "../src/core/filter/loot-filter.ts";
 import { LootSession } from "../src/core/loot-session.ts";
 import type { PickupNotification } from "../src/shared/pickup-overlay.ts";
@@ -117,6 +117,40 @@ test("cards enter the bag and repeated stack increases trigger additions", () =>
   expect(session.bag()[0]?.count).toBe(2);
 });
 
+test("colliding Mushroom material and card IDs retain their distinct catalog identities", () => {
+  const material = stackFacts({ itemId: "Mushroom", count: 2, favorite: false }, "material");
+  const card = cardFacts({ itemId: "Mushroom", count: 2, favorite: false });
+
+  expect(material.view).toMatchObject({ name: "Mushroom", type: "Material", kind: "material", icon: "published-wiki-data-icons-mushroom.webp" });
+  expect(card.view).toMatchObject({ name: "Shroom Card", type: "Card", kind: "card", icon: "published-content-game-icons-card.webp" });
+});
+
+test("Box of Mastery matches its display name and reports stack-delta notifications with its icon", () => {
+  const pickups: PickupNotification[] = [];
+  const session = new LootSession({ onPickup: (pickup) => { pickups.push(pickup); } });
+  session.setFilter('Show "boxes"\n  Name "Box of Mastery"\n  Tag BOX');
+  session.consumeInventory({ equips: [], artifacts: [], cards: [], gems: [], junks: [], consumables: [], cosmetics: [] });
+
+  const first = session.consumeInventory({
+    equips: [], artifacts: [], cards: [], gems: [], junks: [],
+    consumables: [{ itemId: "Artifact Box Advanced", count: 1, favorite: false }],
+    cosmetics: [],
+  });
+  session.consumeInventory({
+    equips: [], artifacts: [], cards: [], gems: [], junks: [],
+    consumables: [{ itemId: "Artifact Box Advanced", count: 3, favorite: false }],
+    cosmetics: [],
+  });
+
+  expect(first.added).toMatchObject([{
+    name: "Box of Mastery", type: "Consumable", kind: "consumable", icon: "published-wiki-data-icons-security_box_bw.webp", match: { tag: "BOX" },
+  }]);
+  expect(pickups).toEqual([
+    expect.objectContaining({ name: "Box of Mastery", icon: "published-wiki-data-icons-security_box_bw.webp", quantity: 1, tag: "BOX" }),
+    expect.objectContaining({ name: "Box of Mastery", icon: "published-wiki-data-icons-security_box_bw.webp", quantity: 2, tag: "BOX" }),
+  ]);
+});
+
 test("pickup notifications use stack deltas independently of sound", () => {
   const pickups: PickupNotification[] = [];
   const played: string[] = [];
@@ -173,7 +207,7 @@ test("catalog facts apply chest-specific substat caps", () => {
   expect(facts.lines[0]?.base).toBe(10);
   expect(facts.lines[0]?.rollPct).toBe(100);
   expect(facts.topRolls).toBe(1);
-  expect(facts.view.icon).toBe("equip-V2_Chest_17.webp");
+  expect(facts.view.icon).toBe("published-content-game-icons-equip-v2_chest_17.webp");
 });
 
 test("Azure Antlers printed rolls satisfy specific stat filters", () => {
@@ -255,7 +289,7 @@ test("artifact facts resolve the concrete slot piece", () => {
   const facts = artifactFacts(item);
   expect(facts.view.name).toBe("Blitzcore Jewel");
   expect(facts.view.type).toBe("Jewel");
-  expect(facts.view.icon).toBe("artifact-auto-1.webp");
+  expect(facts.view.icon).toBe("published-content-game-icons-artifact-auto-1.webp");
 });
 
 test("artifact category rule matches a three-top primary artifact", () => {

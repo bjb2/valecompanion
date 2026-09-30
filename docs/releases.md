@@ -2,6 +2,8 @@
 
 The release workflow builds Windows x64 NSIS and portable executables on Windows, and Linux x64 AppImage, DEB and RPM on Ubuntu 22.04. Native builds are required because `src/build.ts` copies the host Bun executable into the collector bundle.
 
+Before release validation, run `bun run sync:catalog` to regenerate the bundled catalog and artwork from the published SpiritValers exports. For a local copy of the deployed site, use `bun run sync:catalog ../spiritvale-deploy`. Review the reported category counts and added/removed/changed entries, then commit the generated data with the release. `assets/cosmetics.json` remains the supplemental cosmetic input; every runtime consumer uses the unified category-keyed `assets/catalog.json`. Builds never fetch mutable website data, so CI and corresponding-source builds reproduce the committed catalog.
+
 Run `bun run check`, then `bun run package:win` or `bun run package:linux` on the matching platform. `bun run src/verify-release.ts` checks that all expected artifacts exist and the generated updater metadata matches their version and SHA-512 checksums. Do not rename updater assets after building.
 
 The workflow can be run manually to produce downloadable Actions artifacts without creating a release. Pushing a `v<package.json version>` tag builds both platforms and assembles a **draft** GitHub release only after both jobs pass. It refuses to modify an already published release. The workflow never publishes a draft automatically. Replace the template release notes and publish the complete draft when approved.

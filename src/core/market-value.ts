@@ -1,5 +1,6 @@
 import type { LootItemView, MarketValueTier, MarketValueView } from "../shared/contracts.ts";
 import { ARTIFACT_SLOT_NAMES } from "./types.ts";
+import { LOOT_CATALOG_KINDS, type CatalogKind } from "../shared/item-catalog.ts";
 
 export interface MarketListing {
   itemId: string;
@@ -36,9 +37,9 @@ export function priceItem(item: LootItemView, listings: MarketListing[]): Market
   return { low: prices[0]!, median: percentile(prices, 0.5), tier, listings: prices.length };
 }
 
-export function priceBag(bag: LootItemView[], byItem: (itemId: string) => MarketListing[]): LootItemView[] {
+export function priceBag(bag: LootItemView[], byItem: (itemId: string, kind: CatalogKind) => MarketListing[]): LootItemView[] {
   return bag.map((item) => {
-    const value = priceItem(item, byItem(item.itemId));
+    const value = priceItem(item, byItem(item.itemId, LOOT_CATALOG_KINDS[item.kind]));
     return value ? { ...item, value } : item;
   });
 }
