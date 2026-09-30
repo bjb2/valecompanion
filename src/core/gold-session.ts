@@ -1,4 +1,4 @@
-import type { CapturedFishNetPacket } from "@kar-mi/spirit-vale-tools-capture";
+import type { CapturedFishNetPacket } from "@valecompanion/capture";
 import type { GoldAnalyticsView, GoldBucketView, GoldSessionSummaryView } from "../shared/contracts.ts";
 import type { SaviSnapshot } from "./types.ts";
 

@@ -1,4 +1,4 @@
-import type { CapturedFishNetPacket } from "@kar-mi/spirit-vale-tools-capture";
+import type { CapturedFishNetPacket } from "@valecompanion/capture";
 import { decodeCharacterData, decodePersonalStorageBatch, decodeInventoryPayload, identifyCharacterPayload } from "./character-data.ts";
 import type { SaviInventory, SaviSnapshot } from "./types.ts";
 

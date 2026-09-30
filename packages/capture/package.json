@@ -1,0 +1,13 @@
+{
+  "name": "@valecompanion/capture",
+  "version": "3.0.3",
+  "private": true,
+  "description": "Passive Windows packet capture and Spirit Vale protocol decoding for Bun.",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./wire-reader": "./src/fishnet/decoding/wire-reader.ts",
+    "./capture": "./src/capture.ts"
+  }
+}

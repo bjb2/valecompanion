@@ -1,11 +1,9 @@
-import {
-  catalogItemType,
-  marketListingKey,
-  parseFishNetMarketStats,
-  resolveFishNetMarketListingDisplayName,
-  type FishNetMarketEvent,
-  type FishNetMarketListing,
-} from "@kar-mi/spirit-vale-tools-market";
+import { catalogItemType,
+marketListingKey,
+parseFishNetMarketStats,
+resolveFishNetMarketListingDisplayName,
+type FishNetMarketEvent,
+type FishNetMarketListing, } from "@valecompanion/market";
 import { printedSubstatValue } from "../core/catalog.ts";
 import {
   canonicalObservationPayload,

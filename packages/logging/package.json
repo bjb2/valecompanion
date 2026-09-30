@@ -1,0 +1,11 @@
+{
+  "name": "@valecompanion/logging",
+  "version": "0.10.1",
+  "private": true,
+  "description": "Session-oriented logging utilities for Spirit Vale tools.",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

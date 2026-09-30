@@ -28,7 +28,7 @@ if (!app.requestSingleInstanceLock()) app.quit();
 else {
   app.on("second-instance", () => {
     diagnostics.info("Second-instance launch redirected to the existing window");
-    if (!mainWindow) return;
+    if (!mainWindow || packagedSmokeTest) return;
     if (mainWindow.isMinimized()) mainWindow.restore();
     mainWindow.show();
     mainWindow.focus();
@@ -236,6 +236,22 @@ async function finishPackagedSmoke(applicationUrl: string, failure?: unknown): P
         return [...document.querySelectorAll('.settings-drawer button')].some(button => button.textContent === 'Check for updates' && button.disabled);
       })()`);
       if (!updatesReady) throw new Error("Packaged update bridge or settings UI failed its smoke test");
+      const iconPaths: string[] = await mainWindow!.webContents.executeJavaScript(`(async () => {
+        const response = await fetch('/catalog.json', { cache: 'no-store' });
+        if (!response.ok) throw new Error('Packaged catalog request failed: ' + response.status);
+        const byKind = new Map();
+        for (const item of Object.values(await response.json())) {
+          if (item.icon && !byKind.has(item.kind)) byKind.set(item.kind, '/' + item.icon);
+        }
+        if (!byKind.size) throw new Error('Packaged catalog has no artwork to verify');
+        return [...byKind.values()];
+      })()`);
+      await verifyPackagedIcons(iconPaths, "initial");
+      const portableExecutable = process.env.PORTABLE_EXECUTABLE_FILE;
+      if (process.platform === "win32" && portableExecutable) {
+        await verifyPortableSecondLaunch(portableExecutable);
+        await verifyPackagedIcons(iconPaths, "after-second-launch");
+      }
       diagnostics.info("Packaged smoke test passed", { url: applicationUrl });
     } catch (cause) {
       error = cause;
@@ -246,6 +262,45 @@ async function finishPackagedSmoke(applicationUrl: string, failure?: unknown): P
     diagnostics.error("Packaged smoke test failed", { error: formatError(error) });
   }
   app.quit();
+}
+
+async function verifyPackagedIcons(iconPaths: string[], stage: string): Promise<void> {
+  await mainWindow!.webContents.executeJavaScript(`Promise.all(${JSON.stringify(iconPaths)}.map(async (path) => {
+    const image = new Image();
+    image.src = path + '?smoke=' + ${JSON.stringify(stage)} + '-' + Date.now();
+    await image.decode();
+    if (image.naturalWidth === 0 || image.naturalHeight === 0) throw new Error('Empty packaged icon: ' + path);
+  }))`);
+  diagnostics.info("Packaged game icons decoded", { stage, categories: iconPaths.length });
+}
+
+async function verifyPortableSecondLaunch(executable: string): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    let redirected = false;
+    const onSecondInstance = () => { redirected = true; };
+    app.on("second-instance", onSecondInstance);
+    const second = spawn(executable, [`--user-data-dir=${app.getPath("userData")}`], {
+      env: process.env,
+      stdio: "ignore",
+      windowsHide: true,
+    });
+    const timeout = setTimeout(() => {
+      second.kill();
+      finish(new Error("Second portable launch did not exit within 30 seconds"));
+    }, 30_000);
+    const finish = (error?: Error) => {
+      clearTimeout(timeout);
+      app.removeListener("second-instance", onSecondInstance);
+      if (error) reject(error);
+      else resolve();
+    };
+    second.once("error", finish);
+    second.once("exit", (code, signal) => {
+      finish(code === 0 && redirected ? undefined : new Error(
+        `Second portable launch failed: exit=${code}, signal=${signal}, redirected=${redirected}`,
+      ));
+    });
+  });
 }
 
 async function stopCollector(requireCleanExit = false): Promise<void> {

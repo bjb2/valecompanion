@@ -15,6 +15,7 @@ RUN useradd --create-home --uid 1000 tester
 WORKDIR /workspace
 COPY package.json bun.lock tsconfig.json LICENSE NOTICE SOURCE-OFFER.txt ./
 COPY src ./src
+COPY packages ./packages
 COPY test ./test
 COPY assets ./assets
 COPY docs ./docs

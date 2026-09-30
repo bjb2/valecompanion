@@ -1,10 +1,8 @@
-import { CURRENT_GAME_BUILD_FINGERPRINT, type CapturedFishNetPacket } from "@kar-mi/spirit-vale-tools-capture";
-import { readSignedPackedWhole } from "@kar-mi/spirit-vale-tools-capture/wire-reader";
-import {
-  decodeFishNetMarketPacket,
-  FishNetMarketTracker,
-  type FishNetMarketEvent,
-} from "@kar-mi/spirit-vale-tools-market";
+import { CURRENT_GAME_BUILD_FINGERPRINT, type CapturedFishNetPacket } from "@valecompanion/capture";
+import { readSignedPackedWhole } from "@valecompanion/capture/wire-reader";
+import { decodeFishNetMarketPacket,
+FishNetMarketTracker,
+type FishNetMarketEvent, } from "@valecompanion/market";
 import {
   MARKET_API_URL,
   MARKET_PACKAGE_VERSION,

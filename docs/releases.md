@@ -4,11 +4,21 @@ The release workflow builds Windows x64 NSIS and portable executables on Windows
 
 Before release validation, run `bun run sync:catalog` to regenerate the bundled catalog and artwork from the published SpiritValers exports. For a local copy of the deployed site, use `bun run sync:catalog ../spiritvale-deploy`. Review the reported category counts and added/removed/changed entries, then commit the generated data with the release. `assets/cosmetics.json` remains the supplemental cosmetic input; every runtime consumer uses the unified category-keyed `assets/catalog.json`. Builds never fetch mutable website data, so CI and corresponding-source builds reproduce the committed catalog.
 
+The capture/items/market/logging libraries are local source workspaces under `packages/`, not registry downloads. Preserve this directory, its licenses, and `packages/upstream.json` in every source archive and clean build context. `bun run check` validates the canonical `packages/capture/data/rpc-map.json` as well as typechecking and tests. For a game patch, follow README's protocol-maintenance procedure: export a rollback copy, validate and review the candidate map, import it, rebuild, and verify login, bag updates, storage, market decoding, and mid-session attachment in game. A structurally valid map is not evidence of live compatibility. Do not enable community contribution for an unverified map or silently change item/roll data provenance when only the RPC map changed.
+
 Run `bun run check`, then `bun run package:win` or `bun run package:linux` on the matching platform. `bun run src/verify-release.ts` checks that all expected artifacts exist and the generated updater metadata matches their version and SHA-512 checksums. Do not rename updater assets after building.
 
 The workflow can be run manually to produce downloadable Actions artifacts without creating a release. Pushing a `v<package.json version>` tag builds both platforms and assembles a **draft** GitHub release only after both jobs pass. It refuses to modify an already published release. The workflow never publishes a draft automatically. Replace the template release notes and publish the complete draft when approved.
 
 GitHub Releases hosts the update feed; no client token is embedded. Keep `latest.yml`, `latest-linux.yml`, all referenced artifacts and generated blockmaps together. Stable clients ignore prereleases and downgrades. Never overwrite an already published version; ship a higher patch version for fixes.
+
+## Portable extraction lifetime
+
+Each Windows portable launch must extract into its own temporary directory. With a shared per-build directory, a second launch can pass Electron's single-instance handoff, exit, and delete the first instance's icons, renderer files, and collector entrypoint while its loaded code keeps running. Bag data can continue updating even though every icon request returns 404.
+
+The pinned electron-builder **26.15.3** implementation requires `portable.unpackDirName: true` to omit `UNPACK_DIR_NAME` and use NSIS's per-launch `$PLUGINSDIR`. Its option documentation incorrectly describes `false` for this behavior; follow the verified launcher behavior, not that description. Recheck this when upgrading electron-builder.
+
+The packaged smoke now decodes game artwork from each catalog category in the actual renderer. For Windows portable builds, it also launches the same executable a second time, waits for single-instance handoff and launcher cleanup, and decodes fresh, cache-busted icon URLs again. Windows smoke uses isolated settings with capture, contribution, and sounds disabled. Run `bun run check` and packaged smoke **sequentially**: both deliberately reserve legacy port 47832 during their startup checks.
 
 ## Signing
 

@@ -249,6 +249,61 @@ The command imports equipment (including grimoires), cards, gems, artifact sets 
 
 Catalog addresses include category and internal item ID; artifact pieces also include their slot. This keeps shared IDs such as Mushroom material and Shroom Card separate in loot, market listings, and valuation. Names and filterable types are suggested from the same generated data. Refreshes validate source entries and referenced WebP artwork before writing, report added/removed/changed entries, and can be reviewed and committed with the release. Normal builds and installed applications use the committed data offline; they do not refresh the catalog at startup.
 
+### Maintaining the protocol without upstream packages
+
+Capture, item lookup, market decoding, and their logging support are owned TypeScript workspaces under `packages/`, imported as `@valecompanion/*`. Installation and builds do not download `@kar-mi/spirit-vale-tools-*`. The starting versions and exact source commits are recorded in [`packages/upstream.json`](packages/upstream.json); each package retains its upstream AGPL license. This cutover preserves the Companion's shipped protocol data rather than guessing an updated game layout.
+
+The authoritative RPC map is [`packages/capture/data/rpc-map.json`](packages/capture/data/rpc-map.json). Both the live decoder and replay decoder load it, and the collector's market-upload build identity comes from its `buildFingerprint`. There is no second generated TypeScript map or separately edited capture fingerprint. The JSON is validated when loaded and bundled into the application: **after importing an update, rebuild and restart Companion**. Editing a source checkout does not hot-update an installed executable.
+
+```sh
+bun run rpc:map --help
+bun run rpc:map export ../rpc-before.json
+bun run rpc:map check ../rpc-candidate.json
+bun run rpc:map diff ../rpc-candidate.json
+bun run rpc:map import ../rpc-candidate.json
+bun run check
+bun run build
+```
+
+`export` saves the current map for editing or rollback. `check` validates without writing; `diff` reports changed behaviours, RPCs, SyncTypes, broadcasts, and prefab layouts. `import` validates first and atomically replaces the canonical JSON. Invalid input leaves the active map untouched. A changed map with the same build fingerprint is refused unless `import ... --same-build` is explicitly used for a verified correction to the **same** game binaries. To roll back, import the saved map and rebuild; use `--same-build` when rolling back a same-build correction.
+
+An existing datamine export can be imported directly:
+
+```sh
+bun run rpc:map check ../rpc-build.json --prefab-layouts ../prefab-layouts.json
+bun run rpc:map diff ../rpc-build.json --prefab-layouts ../prefab-layouts.json
+bun run rpc:map import ../rpc-build.json --prefab-layouts ../prefab-layouts.json
+```
+
+`rpc-build.json` must contain a `wireMap`. The optional prefab export supplies `rpcPrefabs` component layouts and `prefabs` display names, joined by collection ID and prefab ID. All inputs must come from the same game build.
+
+#### Recovering a map after a game patch
+
+The CLI is a map-maintenance tool, **not an automatic binary-to-RPC extractor**. No discontinued upstream service is required, but new definitions still need evidence from the game:
+
+1. Preserve the matching `GameAssembly.dll`, `global-metadata.dat`, IL2CPP dump, and Unity asset export for the new build. Never pair an old dump with a newly overwritten DLL. The separately installed `il2cpp-kit` can dump/register a build and compare it with the previous one; `unity-export-kit` inspects the matching asset export.
+2. Export our current map as a candidate. Check changed RPC wire registrations and packet kinds against the binary; check parameter order and codecs against generated readers/writers. Recover prefab collection/ID/component-index layouts and SyncType indices from matching assets and code. Method names alone do not establish wire IDs or serialization order; leave unverified parameter codecs absent rather than inventing them.
+3. For a manual new-build map, obtain a reproducible local fingerprint:
+
+   ```sh
+   bun run rpc:map fingerprint "/path/to/GameAssembly.dll" "/path/to/global-metadata.dat"
+   ```
+
+   Copy the reported `local buildFingerprint` into the candidate and retain the manifest with the build artifacts. The command hashes each file, then hashes the UTF-8 JSON manifest with keys `GameAssembly.dll` and `global-metadata.dat` in that order. This identifies the binary pair; it does **not** prove compatibility or reproduce the original upstream fingerprint scheme. A matched datamine export may retain its own fingerprint.
+4. Check and review the candidate diff, import, run `bun run check`, rebuild, and perform the in-game checks below. Commit the verified map and any required decoder changes together.
+
+A map-only update does not regenerate character/storage field layouts (`src/core/character-data.ts`), transport readers (`packages/capture/src/`), market DTOs or stat IDs (`packages/market/src/`), static item definitions (`packages/items/src/`), or printed-stat pools (`assets/substat-pools.json`). Those are now editable locally too, but must be checked separately when the game changes them. Item-catalog and map-name snapshots keep their original build identities instead of silently acquiring the new RPC fingerprint. `sync:catalog` remains a separate names/artwork refresh.
+
+#### In-game verification
+
+- Start Companion before login; confirm character and bag populate and a map transition preserves them.
+- Pick up an item, equip/unequip gear, and confirm bag changes and loot alerts occur once.
+- Open personal storage; deposit and withdraw an item and compare both inventories with the game.
+- Confirm gold changes and a market search/stall visit decode correctly, including item names and printed stats.
+- Restart Companion while already logged in and repeat a bag/storage refresh to exercise mid-session RPC recovery.
+
+Keep community contribution disabled while validating an experimental map. Map validation checks structure, not the truth of recovered wire definitions; do not submit unverified observations. Npcap/libpcap remain system dependencies, and the community market API and optional SpiritValers catalog refresh remain external services. “Standalone” here means ownership of the decoding libraries and RPC update process, not an offline replacement for the community market.
+
 ## Project layout
 
 ```text
@@ -257,6 +312,7 @@ src/core/          Character decoding, inventory projection, loot rules, and gol
 src/electron/      Desktop shell and collector supervision
 src/frontend/      Companion navigation, settings, loot, and gold workspaces
 prototype/         Local market UI development server
+packages/          Owned capture, items, market, and logging source; canonical RPC map and CLI
 test/              Decoder, capture, filter, and session contract tests
 docs/              Starter ruleset and supporting assets
 ```

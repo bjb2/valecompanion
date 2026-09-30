@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "upstreams": [
+    {
+      "localPackage": "@valecompanion/capture",
+      "upstreamPackage": "@kar-mi/spirit-vale-tools-capture",
+      "version": "3.0.3",
+      "repository": "https://github.com/kar-mi/spirit-vale-tools.git",
+      "commit": "6e075bea7e81270b5fca81a49e1e2f5bc6fde10b",
+      "sourcePath": "packages/capture",
+      "localModifications": [
+        "Renamed package and source exports for the Vale Companion workspace.",
+        "Replaced generated RPC-map TypeScript with validated packages/capture/data/rpc-map.json; build identity follows that file.",
+        "Kept generated map-name data bound to its original fingerprint rather than relabelling it on RPC-only updates.",
+        "Made existing explicit undefined values precise in TypeScript contracts for Companion's exactOptionalPropertyTypes setting; runtime semantics are unchanged.",
+        "Added validated RPC-map export, diff, import, and binary-pair fingerprint tooling."
+      ]
+    },
+    {
+      "localPackage": "@valecompanion/items",
+      "upstreamPackage": "@kar-mi/spirit-vale-tools-items",
+      "version": "0.1.12",
+      "repository": "https://github.com/kar-mi/spirit-vale-tools.git",
+      "commit": "87701f783119c317699e66c8b85c323dd9810f8c",
+      "sourcePath": "packages/items",
+      "generatedDefinitionsCommit": "6e075bea7e81270b5fca81a49e1e2f5bc6fde10b",
+      "generatedDefinitionsProvenance": "All seven category arrays at this revision match the installed 0.1.12 catalog exactly; the npm gitHead's older generated arrays do not. Runtime catalog equality was verified before cutover.",
+      "localModifications": [
+        "Renamed package and source exports for the Vale Companion workspace.",
+        "Pinned the bundled item catalog to its generated ce04a28c94ea82848b85c29d2867d2c9061a8972b998b30e898fcb3f65a166ba baseline so RPC-map updates cannot relabel static item data."
+      ]
+    },
+    {
+      "localPackage": "@valecompanion/market",
+      "upstreamPackage": "@kar-mi/spirit-vale-tools-market",
+      "version": "2.0.2",
+      "repository": "https://github.com/kar-mi/spirit-vale-tools.git",
+      "commit": "6e075bea7e81270b5fca81a49e1e2f5bc6fde10b",
+      "sourcePath": "packages/market",
+      "localModifications": [
+        "Renamed package and source exports for the Vale Companion workspace.",
+        "Replaced capture, items, and logging dependencies with local workspace packages.",
+        "Made existing explicit undefined values precise in TypeScript contracts without changing runtime behavior."
+      ]
+    },
+    {
+      "localPackage": "@valecompanion/logging",
+      "upstreamPackage": "@kar-mi/spirit-vale-tools-logging",
+      "version": "0.10.1",
+      "repository": "https://github.com/kar-mi/spirit-vale-tools.git",
+      "commit": "87701f783119c317699e66c8b85c323dd9810f8c",
+      "sourcePath": "packages/logging",
+      "installedVersionVerified": "0.10.1",
+      "sourceContentAlsoMatchesCommit": "6e075bea7e81270b5fca81a49e1e2f5bc6fde10b",
+      "localModifications": [
+        "Renamed package and source exports for the Vale Companion workspace.",
+        "Made resettable state and explicit undefined callbacks precise under exactOptionalPropertyTypes without changing runtime behavior."
+      ]
+    }
+  ]
+}

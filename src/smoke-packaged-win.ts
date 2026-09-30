@@ -9,10 +9,15 @@ const packageJson = await Bun.file(path.join(root, "package.json")).json() as { 
 if (typeof packageJson.version !== "string" || !packageJson.version) {
   throw new Error("package.json does not contain an application version.");
 }
-const executable = process.argv[2] ?? path.join(root, "dist", `ValeCompanion-${packageJson.version}-windows-${process.arch}.exe`);
+const executable = path.resolve(process.argv[2] ?? path.join(root, "dist", `ValeCompanion-${packageJson.version}-windows-${process.arch}.exe`));
 if (!existsSync(executable)) throw new Error(`Release package is missing: ${executable}`);
 
 const dataDirectory = mkdtempSync(path.join(tmpdir(), "valecompanion-package-smoke-"));
+await Bun.write(path.join(dataDirectory, "settings.json"), JSON.stringify({
+  enabled: false,
+  contributionEnabled: false,
+  soundsEnabled: false,
+}));
 const legacyPortBlocker = Bun.serve({
   hostname: "127.0.0.1",
   port: 47_832,
@@ -37,7 +42,9 @@ try {
   if (timedOut) throw new Error("Packaged application smoke test timed out.");
   if (exitCode !== 0) throw new Error(`Packaged application smoke test failed with exit code ${exitCode}.`);
   const log = await Bun.file(path.join(dataDirectory, "logs", "desktop.log")).text();
-  if (!log.includes("Packaged smoke test passed")) throw new Error("Package exited without completing the renderer smoke test.");
+  if (!log.includes("Packaged smoke test passed")) {
+    throw new Error(`Package exited without completing the renderer smoke test:\n${log.split("\n").slice(-20).join("\n")}`);
+  }
   console.log("Release package launched its collector and renderer successfully.");
 } finally {
   legacyPortBlocker.stop(true);

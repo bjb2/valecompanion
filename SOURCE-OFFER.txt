@@ -5,8 +5,10 @@ Each binary release is accompanied by machine-readable Corresponding Source
 under the GNU Affero General Public License, version 3 or later. Download the
 source archive attached to the same release.
 
-The source includes Vale Companion, its exact dependency manifest and
-lockfile, and the scripts used to build and package the Electron application.
+The source includes Vale Companion, the owned capture/items/market/logging
+TypeScript packages and RPC-map tooling under packages/, their original
+licenses and revision provenance, the exact dependency manifest and lockfile,
+and the scripts used to build and package the Electron application.
 To rebuild on Windows x64 or Linux x64 with Bun 1.4 or newer, run:
 
     bun run setup
@@ -14,10 +16,11 @@ To rebuild on Windows x64 or Linux x64 with Bun 1.4 or newer, run:
     bun run package:win      # Windows
     bun run package:linux    # Linux
 
-The AGPL-licensed @kar-mi Spirit Vale Tools dependencies are identified and
-version-pinned in package.json and bun.lock. Their source is published at
-https://github.com/kar-mi/spirit-vale-tools; `bun install` retrieves the pinned
-package source from the Bun/npm registry.
+The local @valecompanion packages are derived from the AGPL-licensed Spirit
+Vale Tools source at https://github.com/kar-mi/spirit-vale-tools. Exact starting
+versions and commits are recorded in packages/upstream.json. They are included
+in full as editable production source and are resolved as local workspaces;
+no @kar-mi package download or upstream account is required to rebuild.
 
 No Npcap executable or driver, libpcap library, or dumpcap executable is
 included. These remain separately obtained system components.

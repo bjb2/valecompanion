@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import type { CapturedFishNetPacket } from "@kar-mi/spirit-vale-tools-capture";
+import type { CapturedFishNetPacket } from "@valecompanion/capture";
 import { UPDATE_FULL } from "../src/core/character-data.ts";
 import { consumeFishNetPacket } from "../src/core/packet-consumer.ts";
 import { LootSession } from "../src/core/loot-session.ts";

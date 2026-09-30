@@ -1,0 +1,11 @@
+{
+  "name": "@valecompanion/items",
+  "version": "0.1.12",
+  "private": true,
+  "description": "Build-scoped Spirit Vale item catalog utilities.",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

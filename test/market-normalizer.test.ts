@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import type { FishNetMarketListing } from "@kar-mi/spirit-vale-tools-market";
+import type { FishNetMarketListing } from "@valecompanion/market";
 import { normalizeListing } from "../src/backend/market-normalizer.ts";
 
 function listing(payload: object): FishNetMarketListing {

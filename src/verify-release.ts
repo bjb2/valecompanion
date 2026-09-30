@@ -5,7 +5,8 @@ import { createRequire } from "node:module";
 
 // Use the same YAML parser as electron-builder, without adding a runtime dependency.
 const require = createRequire(import.meta.url);
-const builderRequire = createRequire(require.resolve("app-builder-lib"));
+const electronBuilderRequire = createRequire(require.resolve("electron-builder"));
+const builderRequire = createRequire(electronBuilderRequire.resolve("app-builder-lib"));
 const { load } = builderRequire("js-yaml") as { load(text: string): unknown };
 const { version } = await Bun.file("package.json").json();
 const [targetPlatform = process.platform, outputDirectory = "dist"] = process.argv.slice(2);

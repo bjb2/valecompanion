@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { CapturedFishNetPacket, CapturedLiteNetLibPacket } from "@kar-mi/spirit-vale-tools-capture";
+import type { CapturedFishNetPacket, CapturedLiteNetLibPacket } from "@valecompanion/capture";
 import { FishNetCaptureDecoder, LiteNetFragmentReassembler } from "../src/backend/fishnet-capture-decoder.ts";
 
 describe("LiteNetLib fragment reassembly", () => {

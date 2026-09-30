@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { CapturedFishNetPacket } from "@kar-mi/spirit-vale-tools-capture";
+import type { CapturedFishNetPacket } from "@valecompanion/capture";
 import { GoldSession } from "../src/core/gold-session.ts";
 import type { SaviSnapshot } from "../src/core/types.ts";
 

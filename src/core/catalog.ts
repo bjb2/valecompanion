@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
-import { resolveFishNetItem } from "@kar-mi/spirit-vale-tools-items";
-import { fishNetMarketStatName } from "@kar-mi/spirit-vale-tools-market";
+import { resolveFishNetItem } from "@valecompanion/items";
+import { fishNetMarketStatName } from "@valecompanion/market";
 import substatPools from "../../assets/substat-pools.json";
 import { catalogKey, LOOT_CATALOG_KINDS, type CatalogKind, type CatalogEntry, type ItemCatalog } from "../shared/item-catalog.ts";
 import type { LootItemView, LootLine } from "../shared/contracts.ts";

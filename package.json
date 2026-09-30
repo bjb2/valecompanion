@@ -1,6 +1,6 @@
 {
   "name": "valecompanion",
-  "version": "0.6.2",
+  "version": "0.7.0",
   "private": true,
   "description": "Unified passive companion for Spirit Vale",
   "homepage": "https://github.com/bjb2/valecompanion",
@@ -11,12 +11,15 @@
   "license": "AGPL-3.0-or-later",
   "type": "module",
   "main": "build/electron/main.js",
+  "workspaces": ["packages/*"],
   "scripts": {
     "setup": "bun install",
     "prepare": "bun run src/build.ts",
     "dev": "bun run prepare && electron .",
     "build": "bun run prepare",
     "sync:catalog": "bun run src/sync-catalog.ts",
+    "rpc:map": "bun run packages/capture/src/rpc-map.ts",
+    "rpc:check": "bun run packages/capture/src/rpc-map.ts check packages/capture/data/rpc-map.json",
     "package": "bun run prepare && electron-builder --publish never",
     "package:win": "bun run prepare && electron-builder --win nsis portable --x64 --publish never && bun run smoke:package:win",
     "smoke:package:win": "bun run src/smoke-packaged-win.ts",
@@ -25,12 +28,12 @@
     "prototype": "bun run prototype/server.ts",
     "test": "bun test",
     "typecheck": "tsc --noEmit",
-    "check": "bun run typecheck && bun test"
+    "check": "bun run rpc:check && bun run typecheck && bun test"
   },
   "dependencies": {
-    "@kar-mi/spirit-vale-tools-capture": "3.0.3",
-    "@kar-mi/spirit-vale-tools-items": "0.1.12",
-    "@kar-mi/spirit-vale-tools-market": "2.0.2",
+    "@valecompanion/capture": "workspace:*",
+    "@valecompanion/items": "workspace:*",
+    "@valecompanion/market": "workspace:*",
     "electron-updater": "^6.8.9",
     "lucide-preact": "^0.544.0",
     "preact": "10.29.7"
@@ -77,6 +80,9 @@
     "win": {
       "target": ["nsis", "portable"],
       "artifactName": "ValeCompanion-${version}-windows-${arch}.${ext}"
+    },
+    "portable": {
+      "unpackDirName": true
     },
     "nsis": {
       "artifactName": "ValeCompanion-${version}-windows-${arch}-setup.${ext}",

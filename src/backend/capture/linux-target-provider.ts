@@ -1,6 +1,6 @@
 import { readFile, readdir, readlink } from "node:fs/promises";
 import path from "node:path";
-import type { CaptureProtocol } from "@kar-mi/spirit-vale-tools-capture";
+import type { CaptureProtocol } from "@valecompanion/capture";
 
 export interface OwnedEndpoint {
   protocol: CaptureProtocol;

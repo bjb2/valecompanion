@@ -1,12 +1,10 @@
 import { readFile } from "node:fs/promises";
 import { isIP } from "node:net";
-import {
-  getNpcapStatus,
-  listNpcapDevices,
-  PacketCapture,
-  resolveCaptureDevice as resolveWindowsCaptureDevice,
-  type NpcapDevice,
-} from "@kar-mi/spirit-vale-tools-capture/capture";
+import { getNpcapStatus,
+listNpcapDevices,
+PacketCapture,
+resolveCaptureDevice as resolveWindowsCaptureDevice,
+type NpcapDevice, } from "@valecompanion/capture/capture";
 import type { LinuxCaptureMode } from "../../shared/contracts.ts";
 import {
   LinuxPcapRuntime,
@@ -16,7 +14,7 @@ import {
 import { LinuxTargetSnapshotProvider } from "./linux-target-provider.ts";
 
 export interface ResolvedCaptureDevice {
-  device?: CaptureDeviceRecord;
+  device?: CaptureDeviceRecord | undefined;
   usedFallback: boolean;
   detail?: string;
 }

@@ -1,0 +1,16 @@
+{
+  "name": "@valecompanion/market",
+  "version": "2.0.2",
+  "private": true,
+  "description": "Spirit Vale market decoding and replay utilities.",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@valecompanion/capture": "workspace:*",
+    "@valecompanion/items": "workspace:*",
+    "@valecompanion/logging": "workspace:*"
+  }
+}

@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import type { CaptureConnectionEvent, CaptureTargetStatus } from "@kar-mi/spirit-vale-tools-capture";
-import type { PacketCapture } from "@kar-mi/spirit-vale-tools-capture/capture";
+import type { CaptureConnectionEvent, CaptureTargetStatus } from "@valecompanion/capture";
+import type { PacketCapture } from "@valecompanion/capture/capture";
 import { serializeCollectorMessage } from "../shared/collector-protocol.ts";
 import type { DesktopSettingsUpdate, DesktopState, ProfileCommand } from "../shared/contracts.ts";
 import { createDiagnosticLogger, formatError } from "../shared/diagnostics.ts";

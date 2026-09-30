@@ -2,6 +2,9 @@ node_modules/
 build/
 dist/
 data/
+!packages/capture/data/
+packages/capture/data/*
+!packages/capture/data/rpc-map.json
 *.log
 *.zip
 .DS_Store

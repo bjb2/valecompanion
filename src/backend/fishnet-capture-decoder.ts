@@ -1,11 +1,9 @@
-import {
-  FishNetProtocolError,
-  FishNetSessionDecoder,
-  loadBundledFishNetRpcMap,
-  type CapturedFishNetPacket,
-  type CapturedLiteNetLibPacket,
-  type LiteNetLibChanneledPacket,
-} from "@kar-mi/spirit-vale-tools-capture";
+import { FishNetProtocolError,
+FishNetSessionDecoder,
+loadBundledFishNetRpcMap,
+type CapturedFishNetPacket,
+type CapturedLiteNetLibPacket,
+type LiteNetLibChanneledPacket, } from "@valecompanion/capture";
 
 const MAX_FRAGMENT_GROUPS = 64;
 const MAX_FRAGMENT_PARTS = 1_024;
