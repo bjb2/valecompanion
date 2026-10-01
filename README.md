@@ -255,6 +255,10 @@ Capture, item lookup, market decoding, and their logging support are owned TypeS
 
 The authoritative RPC map is [`packages/capture/data/rpc-map.json`](packages/capture/data/rpc-map.json). Both the live decoder and replay decoder load it, and the collector's market-upload build identity comes from its `buildFingerprint`. There is no second generated TypeScript map or separately edited capture fingerprint. The JSON is validated when loaded and bundled into the application: **after importing an update, rebuild and restart Companion**. Editing a source checkout does not hot-update an installed executable.
 
+The current source map targets **SpiritVale 0.33.0 Early Access, Steam build 25647861**: 385 RPCs across 16 behaviours, 51 SyncTypes, six broadcasts, and six supported prefab layouts. This refresh updates shifted RPC IDs, six added RPCs, the consumable-use count, and `Damage.IsAutocast`; static item and map-name snapshots retain their separate provenance. Matching binary hashes and recovery evidence are recorded in `packages/upstream.json`. Market routing, stacked consumable use, and damage-field alignment have synthetic-wire regression coverage.
+
+Local validation passed map checking, typechecking, all 146 tests, and the application build. Live Windows testing confirmed bag/storage snapshots, pickup alerts, gold/kill updates, and four market response pages containing 88 listings, all normalized without market errors. Test observations were not uploaded. One inventory snapshot was partial; subsequent snapshots populated the bag. Stacked consumable use and damage-field alignment were verified with synthetic packets, not separately confirmed in game. Repeat the checks below for future patches and capture environments.
+
 ```sh
 bun run rpc:map --help
 bun run rpc:map export ../rpc-before.json

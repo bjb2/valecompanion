@@ -13,8 +13,24 @@
         "Replaced generated RPC-map TypeScript with validated packages/capture/data/rpc-map.json; build identity follows that file.",
         "Kept generated map-name data bound to its original fingerprint rather than relabelling it on RPC-only updates.",
         "Made existing explicit undefined values precise in TypeScript contracts for Companion's exactOptionalPropertyTypes setting; runtime semantics are unchanged.",
-        "Added validated RPC-map export, diff, import, and binary-pair fingerprint tooling."
-      ]
+        "Added validated RPC-map export, diff, import, and binary-pair fingerprint tooling.",
+        "Refreshed the RPC map for SpiritVale 0.33.0 (Steam build 25647861): six added RPCs, shifted PlayerController/PlayerSave/SkillsComponent registrations, stacked consumable counts, and the Damage.IsAutocast wire field."
+      ],
+      "protocolMapSource": {
+        "gameVersion": "0.33.0-ea",
+        "steamBuildId": 25647861,
+        "binarySha256": {
+          "GameAssembly.dll": "6202eb64513ca6f5d338dbd44b500a3201157d99f8e7b572364e60a224654c8b",
+          "global-metadata.dat": "39924708627796746e9da486486b0a3ca207a92df80f1aa3e3af1a11fd88bb93"
+        },
+        "verification": [
+          "Recovered all 385 supported RPC registrations from NetworkInitialize___Early, including inherited BaseUnitController RPCs.",
+          "Verified all 51 existing SyncType indices against current initialization instructions and field offsets.",
+          "Verified all six broadcast keys from full type names using the current FNV-1 UTF-16 hash and high/low-half fold.",
+          "Checked all six supported prefab IDs and component layouts against the matching Unity export; existing unsupported SkillInstance component zero remains omitted.",
+          "Compared 40 map-referenced structured types across builds; verified the changed Damage serializer and new RPC parameter codecs against current writers/readers."
+        ]
+      }
     },
     {
       "localPackage": "@valecompanion/items",
