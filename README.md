@@ -163,15 +163,20 @@ The in-app editor offers context-sensitive completions while typing unfinished n
 
 Profiles are named saved filter texts. You can create, duplicate, rename, and activate them; profile names must begin with a letter or number and may then contain letters, numbers, spaces, underscores, and hyphens (up to 64 characters). The editor prevents switching profiles while edits are unsaved, so save or discard those edits first. Saving validates the filter, stores it in the active profile, and repaints the observed bag; an invalid filter is not saved.
 
-### Alert volume and pickup overlay
+### Alert volume and game overlays
 
 **Settings → Loot sounds → Alert volume** controls built-in and custom sounds from 0–100% and is saved across restarts. Existing installations start at 100%. Setting 0% mutes audio without suppressing loot history or visual notifications.
 
-**Settings → Pickup overlay → On-screen pickups** is enabled by default for a transparent, always-on-top desktop overlay. Matching pickups show their icon, name, newly acquired quantity, and rule color/tag. Equipment and artifacts also show decoded substat values, roll percentages, Chaos markers, and refinement. The overlay shows up to five recent pickups, keeping fewer when expanded cards need more room; cards fade after five seconds. Hidden/unmatched items, the initial inventory baseline, full character/map-load inventories, and silent storage transfers do not produce notifications. Subsequent pickup updates still notify normally.
+**Settings → Game overlays → On-screen overlays** controls transparent, always-on-top desktop windows. Enable components individually:
 
-Choose **Reposition**, drag the overlay's header, then choose **Done** or **Lock position**. Locked overlays pass clicks through to the game. Position and enabled state are saved locally; **Reset position** returns it to the primary display. Borderless/windowed gameplay is recommended: exclusive fullscreen and Linux window-manager policies may prevent a desktop overlay from appearing above the game.
+- **Pickups** shows matching loot with icons, newly acquired quantities, rule colors/tags, refinement, and decoded substat rolls. Up to five cards remain visible, keeping fewer when expanded cards need more room; cards fade after five seconds. Hidden/unmatched items, initial inventory baselines, full character/map-load inventories, and silent storage transfers do not produce notifications.
+- **Tracked items** keeps absolute bag counts for up to three selected item types. Search the current bag in Settings or in the item overlay's edit mode. Counts combine all stacks of the same item type, retain selected items at zero when they leave an observed bag, and show an unknown count before an inventory snapshot arrives. These are current holdings, not a cumulative farmed-items counter.
+- **Gold / hour** uses gross earnings divided by active time from the existing Gold session. It excludes the starting balance, labels paused sessions, and waits for an authoritative gold balance before displaying a rate. Use **Finish session** in Gold to begin a new farming run.
+- **Bag weight** displays current weight and automatic capacity from captured inventory and character snapshots, excluding worn gear from current weight. Capacity uses the game's level formula plus equipped gear, matching cards, and Carrier Gem bonuses, including refinement. Missing snapshots or unknown catalog entries are shown explicitly rather than guessed. The formula and bonus sources are verified for game build 0.33.0-ea and must be checked when updating game data.
 
-The overlay starts enabled unless you previously turned it off; its saved on/off choice is respected. If the overlay renderer fails, **Reposition** recreates it without restarting the app.
+Press **F5** to unlock all four windows, including disabled components. Drag each header independently, choose which components to show, then press **F5** again or choose **Done** to lock the layout. The master visibility setting is preserved while editing; enable **On-screen overlays** to keep selected components visible during play. Locked windows pass clicks through to the game. Component choices, tracked items, and per-window positions are saved locally. **Reset all positions** returns the windows to the primary display, and saved positions are clamped to available monitors.
+
+Pickups remain enabled by default; the other components are opt-in. Existing pickup positions and enabled preferences are preserved. If F5 is reserved by another application, Settings reports that and **Enter edit mode** remains available. Entering edit mode also recreates failed overlay renderers without restarting the app. Borderless/windowed gameplay is recommended: exclusive fullscreen and Linux window-manager policies may prevent desktop overlays from appearing above the game.
 
 ## Gold analytics
 

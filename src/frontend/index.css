@@ -323,6 +323,23 @@ h1, h2, h3 { font-family: var(--ui); font-weight: 600; }
 .overlay-settings-actions { display: flex; gap: 8px; margin: 12px 0; }
 .overlay-settings-actions button { padding: 7px 11px; border: 1px solid var(--line2); border-radius: 3px; background: var(--sunk); color: var(--ink); font-size: 11px; }
 .overlay-settings-actions button:disabled { opacity: .45; cursor: default; }
+.overlay-component-list { margin: 10px 0 0; border-top: 1px solid var(--line); }
+.overlay-component-row { padding: 10px 0; border-bottom: 1px solid var(--line); }
+.overlay-item-settings { margin-top: 13px; padding: 11px; border: 1px solid var(--line); border-radius: 4px; background: var(--sunk); }
+.overlay-item-settings .settings-heading { margin-bottom: 9px; }
+.overlay-item-settings .settings-heading b { color: var(--gold); font: 600 10px/1 var(--mono); }
+.overlay-selected-items { display: grid; gap: 5px; margin-bottom: 8px; }
+.overlay-selected-items > div { display: flex; align-items: center; gap: 9px; padding: 6px 7px; border: 1px solid var(--line); border-radius: 3px; background: rgba(255,255,255,.025); }
+.overlay-selected-items span, .overlay-item-options button span { min-width: 0; flex: 1; overflow: hidden; color: var(--ink); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.overlay-selected-items small, .overlay-item-options button small { display: block; overflow: hidden; margin-top: 2px; color: var(--faint); font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
+.overlay-selected-items button { padding: 4px 6px; border: 1px solid var(--line2); border-radius: 3px; background: transparent; color: var(--dim); font-size: 9px; }
+.overlay-item-search { width: 100%; height: 30px; padding: 0 8px; border: 1px solid var(--line2); border-radius: 3px; background: #0d120f; color: var(--ink); font-size: 10px; }
+.overlay-item-options { display: grid; max-height: 150px; gap: 4px; overflow: auto; margin-top: 7px; }
+.overlay-item-options button { display: flex; align-items: center; gap: 9px; padding: 6px 7px; border: 1px solid var(--line); border-radius: 3px; background: rgba(255,255,255,.025); color: var(--ink); text-align: left; }
+.overlay-item-options button:hover:not(:disabled) { border-color: var(--gold-dim); background: rgba(200,169,97,.06); }
+.overlay-item-options button b { color: var(--gold); font: 600 10px/1 var(--mono); }
+.empty-settings-copy { padding: 5px 0; color: var(--faint); font-size: 10px; }
+.overlay-item-settings > small { display: block; margin-top: 9px; color: var(--faint); font-size: 9px; line-height: 1.4; }
 .settings-field small { display: block; margin-top: 6px; color: var(--faint); font-size: 10px; }
 .settings-error { margin-top: 14px; padding: 8px 10px; border-left: 2px solid var(--bad); background: rgba(226,105,95,.07); color: var(--bad); font-size: 10px; }
 .settings-copy { padding: 12px 0; border-top: 1px solid var(--line); }

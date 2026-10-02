@@ -4,9 +4,11 @@ import type { CaptureConnectionEvent, CaptureTargetStatus } from "@valecompanion
 import type { PacketCapture } from "@valecompanion/capture/capture";
 import { serializeCollectorMessage } from "../shared/collector-protocol.ts";
 import type { DesktopSettingsUpdate, DesktopState, ProfileCommand } from "../shared/contracts.ts";
+import type { OverlayData } from "../shared/pickup-overlay.ts";
 import { createDiagnosticLogger, formatError } from "../shared/diagnostics.ts";
 import { LootSession } from "../core/loot-session.ts";
 import { GoldSession } from "../core/gold-session.ts";
+import { BagWeightTracker } from "../core/bag-weight.ts";
 import { parseLootFilter } from "../core/filter/loot-dsl.ts";
 import { consumeFishNetPacket } from "../core/packet-consumer.ts";
 import { FishNetCaptureDecoder } from "./fishnet-capture-decoder.ts";
@@ -158,6 +160,7 @@ const session = new LootSession({
   },
 });
 const storageSession = new LootSession({ silent: true });
+const bagWeight = new BagWeightTracker();
 session.setFilter(persisted.filter);
 storageSession.setFilter(persisted.filter);
 const goldStatePath = path.join(dataDirectory, "gold-sessions.json");
@@ -187,6 +190,7 @@ let detail = "Capture disabled";
 let warning: string | undefined;
 let gameDetected = false;
 let activeConnectionId: string | undefined;
+let bagWeightConnectionId: string | undefined;
 let packetsObserved = 0;
 let snapshotsDecoded = 0;
 let partialSnapshots = 0;
@@ -210,6 +214,10 @@ function setGameDetected(next: boolean): void {
   if (gameDetected === next) return;
   gameDetected = next;
   targetActiveAtMs = next ? Date.now() : undefined;
+  if (!next) {
+    bagWeight.reset();
+    bagWeightConnectionId = undefined;
+  }
   goldSession.setGameActive(next);
   scheduleGoldSave();
 }
@@ -245,6 +253,11 @@ async function flushGoldSave(requireSuccess = false): Promise<void> {
 }
 const fishNetDecoder = new FishNetCaptureDecoder({
   onPacket: (packet) => {
+    if (packet.connectionId && packet.connectionId !== bagWeightConnectionId) {
+      bagWeight.reset();
+      bagWeightConnectionId = packet.connectionId;
+      bagGeneratedAt = null;
+    }
     marketContributor.consume(packet);
     if (goldSession.consumePacket(packet)) scheduleGoldSave();
     packetsObserved++;
@@ -257,15 +270,21 @@ const fishNetDecoder = new FishNetCaptureDecoder({
     snapshotsDecoded++;
     if (result.snapshot?.partial) partialSnapshots++;
     if (result.snapshot) {
+      bagWeight.consumeSnapshot(result.snapshot);
+      if (result.snapshot.inventory) {
+        bagGeneratedAt = new Date().toISOString();
+        bagCoverage = result.snapshot.partial
+          ? "Complete inventory; partial character tail"
+          : "Complete inventory snapshot";
+      }
       if (goldSession.consumeSnapshot(result.snapshot)) scheduleGoldSave();
       session.consume(result.snapshot, result.snapshotMode === "rebaseline");
     } else {
+      bagWeight.consumeInventory(result.inventory!);
       session.consumeInventory(result.inventory!, false, true);
+      bagGeneratedAt = new Date().toISOString();
+      bagCoverage = "Complete inventory snapshot";
     }
-    bagGeneratedAt = new Date().toISOString();
-    bagCoverage = result.snapshot?.partial
-      ? "Complete inventory; partial character tail"
-      : "Complete inventory snapshot";
   },
   onWarning: (message) => {
     warning = message;
@@ -361,6 +380,8 @@ async function restartCapture(
   if (!preserveDecoder) {
     setGameDetected(false);
     activeConnectionId = undefined;
+    bagWeight.reset();
+    bagWeightConnectionId = undefined;
   }
   warning = undefined;
 
@@ -412,7 +433,11 @@ async function restartCapture(
         ? `Spirit Vale detected on ${adapterLabel()}`
         : `Waiting for Spirit Vale on ${adapterLabel()}`;
       diagnostics.info("Target process status changed", { status });
-      if (!gameDetected) activeConnectionId = undefined;
+      if (!gameDetected) {
+        activeConnectionId = undefined;
+        bagWeight.reset();
+        bagWeightConnectionId = undefined;
+      }
     });
     nextCapture.on("connection", (event: CaptureConnectionEvent) => {
       diagnostics.info("Game connection state changed", { event });
@@ -420,12 +445,18 @@ async function restartCapture(
         if (activeConnectionId !== event.connectionId) {
           session.resetCharacter();
           storageSession.resetCharacter();
+          bagWeight.reset();
+          bagWeightConnectionId = undefined;
+          bagGeneratedAt = null;
           storageGeneratedAt = null;
         }
         activeConnectionId = event.connectionId;
         detail = `Spirit Vale connection observed on ${adapterLabel()}`;
       } else if (activeConnectionId === event.connectionId) {
         activeConnectionId = undefined;
+        bagWeight.reset();
+        bagWeightConnectionId = undefined;
+        bagGeneratedAt = null;
         detail = gameDetected
           ? `Waiting for Spirit Vale to reconnect on ${adapterLabel()}`
           : `Waiting for Spirit Vale on ${adapterLabel()}`;
@@ -624,6 +655,17 @@ function currentState(): DesktopState {
   };
 }
 
+function overlayState(): OverlayData {
+  return {
+    bag: session.bag(),
+    bagGeneratedAt,
+    bagWeight: bagWeight.view(),
+    gold: goldSession.snapshot(),
+    gameDetected,
+    phase,
+  };
+}
+
 function errorResponse(message: string, status = 400): Response {
   return Response.json({ error: message }, { status });
 }
@@ -697,6 +739,9 @@ async function routeRequest(request: Request): Promise<Response> {
 
 
   if (method === "GET" && route === "/v1/state") return Response.json(currentState());
+  if (method === "GET" && route === "/v1/overlay") {
+    return Response.json(overlayState(), { headers: { "cache-control": "no-store" } });
+  }
   if (method === "GET" && route === "/v1/market/snapshot") {
     const body = await marketSnapshot.body(url.searchParams.get("refresh") === "1");
     return body ? Response.json(body) : errorResponse(marketSnapshot.view().warning ?? "market snapshot unavailable", 503);

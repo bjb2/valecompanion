@@ -1,6 +1,6 @@
 import { ChartNoAxesCombined, Command, Coins, Radio, Settings, Store, X } from "lucide-preact";
 import { render } from "preact";
-import { useCallback, useEffect, useRef, useState } from "preact/hooks";
+import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks";
 import {
   type CaptureDevice,
   type DesktopSettingsUpdate,
@@ -14,9 +14,16 @@ import { MarketWorkspace } from "./market-workspace.tsx";
 import { bagSignature, marketOpenRequest, type MarketBridgeMessage } from "./market-bridge.ts";
 import { companionModules, isModuleId, type ModuleId } from "./modules.ts";
 import { UpdateNotice, UpdateSettings, useUpdates, type UpdatesModel } from "./updates.tsx";
-import type { PickupOverlayState } from "../shared/pickup-overlay.ts";
+import { OVERLAY_COMPONENTS, type OverlayComponent, type PickupOverlayState, type TrackedOverlayItem } from "../shared/pickup-overlay.ts";
 
 const apiRoot = window.location.origin;
+
+const OVERLAY_COMPONENT_COPY: Record<OverlayComponent, { title: string; detail: string }> = {
+  pickups: { title: "Pickups", detail: "Matched loot notifications with rule colors." },
+  weight: { title: "Bag weight", detail: "Current bag weight, capacity, and usage." },
+  items: { title: "Tracked items", detail: "Absolute bag counts for up to three item types." },
+  gold: { title: "Gold / hour", detail: "Gross earned per active session hour." },
+};
 
 function App() {
   const updates = useUpdates();
@@ -248,7 +255,7 @@ function GlobalSettings({ updates, state, devices, busy, error, onClose, onUpdat
           <p class="sound-list">{(state?.sounds ?? []).join(", ") || "Loading…"}</p>
         </div>
       </section>
-      <PickupOverlaySettings />
+      <PickupOverlaySettings bag={state?.bag ?? []} />
       <section>
         <div class="settings-heading"><span>Diagnostics</span></div>
         {state?.warning && <div class="diagnostic-warning">{state.warning}</div>}
@@ -277,7 +284,7 @@ function GlobalSettings({ updates, state, devices, busy, error, onClose, onUpdat
   </aside>;
 }
 
-function PickupOverlaySettings() {
+function PickupOverlaySettings({ bag }: { bag: LootItemView[] }) {
   const api = window.valeCompanion?.pickupOverlay;
   const [state, setState] = useState<PickupOverlayState>();
   const [busy, setBusy] = useState(false);
@@ -302,26 +309,60 @@ function PickupOverlaySettings() {
   };
 
   return <section>
-    <div class="settings-heading"><span>Pickup overlay</span></div>
+    <div class="settings-heading"><span>Game overlays</span></div>
     {error && <div class="settings-error" role="alert">{error}</div>}
+    {!api && <div class="diagnostic-warning">Desktop overlays are available in the desktop application.</div>}
+    {api && state && !state.hotkeyAvailable && <div class="diagnostic-warning">F5 could not be registered globally. Use “Enter edit mode” below to unlock and position overlays.</div>}
     <label class="switch-row">
-      <span><strong>On-screen pickups</strong><small>Show matched loot with icons, quantities, and rule colors.</small></span>
+      <span><strong>On-screen overlays</strong><small>Master visibility switch for all enabled overlay components.</small></span>
       <input type="checkbox" role="switch" checked={state?.enabled ?? false} disabled={!api || !state || busy}
         onChange={(event) => { const enabled = event.currentTarget.checked; if (api) void update(() => api.setEnabled(enabled)); }} />
     </label>
+    <div class="overlay-component-list">{OVERLAY_COMPONENTS.map((component) => <label class="switch-row overlay-component-row" key={component}>
+      <span><strong>{OVERLAY_COMPONENT_COPY[component].title}</strong><small>{OVERLAY_COMPONENT_COPY[component].detail}</small></span>
+      <input type="checkbox" role="switch" checked={state?.components[component] ?? false} disabled={!api || !state || busy}
+        onChange={(event) => { const enabled = event.currentTarget.checked; if (api) void update(() => api.setComponentEnabled(component, enabled)); }} />
+    </label>)}</div>
+    {state && <OverlayTrackedItems bag={bag} selected={state.trackedItems} disabled={busy} onChange={(items) => { if (api) void update(() => api.setTrackedItems(items)); }} />}
     <div class="overlay-settings-actions">
-      <button type="button" disabled={!api || !state?.enabled || busy}
+      <button type="button" disabled={!api || !state || busy}
         onClick={() => { if (api) void update(() => state?.repositioning ? api.finishReposition() : api.reposition()); }}>
-        {state?.repositioning ? "Lock position" : "Reposition"}
+        {state?.repositioning ? "Lock overlays" : "Enter edit mode (F5)"}
       </button>
       <button type="button" disabled={!api || !state || busy}
-        onClick={() => { if (api) void update(() => api.resetPosition()); }}>Reset position</button>
+        onClick={() => { if (api) void update(() => api.resetPosition()); }}>Reset all positions</button>
     </div>
-    <div class="settings-copy"><p>{api
-      ? "Up to five pickups fade after five seconds. Click-through while locked; drag the handle in Reposition mode, then choose Done. Position is remembered. Best with borderless or windowed gameplay; exclusive fullscreen may hide the overlay."
-      : "The pickup overlay is available in the desktop application."}</p></div>
+    <div class="settings-copy"><p>F5 unlocks every overlay, including disabled components, so you can discover, enable, and drag each one. Click Done in any overlay or lock them here when placement is complete. Positions are remembered; exclusive fullscreen may hide desktop overlays.</p></div>
   </section>;
 }
+
+function OverlayTrackedItems({ bag, selected, disabled, onChange }: { bag: LootItemView[]; selected: TrackedOverlayItem[]; disabled: boolean; onChange(items: TrackedOverlayItem[]): void }) {
+  const [query, setQuery] = useState("");
+  const inventory = useMemo(() => {
+    const items: TrackedOverlayItem[] = [];
+    const seen = new Set<string>();
+    const counts = new Map<string, number>();
+    for (const item of bag) {
+      const key = `${item.kind}:${item.itemId}`;
+      counts.set(key, (counts.get(key) ?? 0) + item.count);
+      if (!seen.has(key)) {
+        seen.add(key);
+        items.push({ itemId: item.itemId, kind: item.kind, name: item.name, icon: item.icon });
+      }
+    }
+    return { items, counts };
+  }, [bag]);
+  const choices = inventory.items.filter((item) => item.name.toLocaleLowerCase().includes(query.toLocaleLowerCase()) || item.kind.toLocaleLowerCase().includes(query.toLocaleLowerCase()));
+  const selectedKeys = new Set(selected.map((item) => `${item.kind}:${item.itemId}`));
+  return <div class="overlay-item-settings">
+    <div class="settings-heading"><span>Tracked item types</span><b>{selected.length}/3</b></div>
+    {selected.length > 0 && <div class="overlay-selected-items">{selected.map((item) => <div key={`${item.kind}:${item.itemId}`}><span>{item.name}<small>{item.kind}</small></span><button type="button" disabled={disabled} onClick={() => onChange(selected.filter((entry) => entry.kind !== item.kind || entry.itemId !== item.itemId))} aria-label={`Stop tracking ${item.name}`}>Remove</button></div>)}</div>}
+    <input class="overlay-item-search" value={query} onInput={(event) => setQuery(event.currentTarget.value)} placeholder="Search current bag items" aria-label="Search current bag items" disabled={disabled || selected.length >= 3} />
+    {selected.length < 3 && <div class="overlay-item-options">{choices.filter((item) => !selectedKeys.has(`${item.kind}:${item.itemId}`)).map((item) => <button type="button" key={`${item.kind}:${item.itemId}`} disabled={disabled} onClick={() => onChange([...selected, item])}><span>{item.name}<small>{item.kind}</small></span><b>{(inventory.counts.get(`${item.kind}:${item.itemId}`) ?? 0).toLocaleString()}</b></button>)}{choices.length === 0 && <span class="empty-settings-copy">No matching items in the current bag.</span>}</div>}
+    <small>Selections are exact item types. Counts combine stacks and stay at zero after an observed item leaves the bag.</small>
+  </div>;
+}
+
 
 async function responseError(response: Response): Promise<string> {
   const text = await response.text();

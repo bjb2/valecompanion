@@ -185,7 +185,7 @@ export function identifyInventoryPayload(payload: Uint8Array): SaviInventory | n
 
 /**
  * Current personal-storage completion callback:
- * request id, two non-negative capacity values, status text, authoritative character inventory,
+ * request id, two non-negative scalar fields, status text, authoritative character inventory,
  * character version, then authoritative storage inventory. The bundled RPC map still labels wire
  * hash 62 with its older `PlayerCallback_Storage` name, so validation must follow the wire shape.
  */
@@ -193,17 +193,22 @@ export function decodePersonalStorageBatchPayload(payload: Uint8Array): SaviInve
   return decodePersonalStorageBatch(payload)?.inventory ?? null;
 }
 
-export function decodePersonalStorageBatch(payload: Uint8Array): { inventory: SaviInventory; storage: SaviInventory } | null {
+export interface PersonalStorageBatch {
+  inventory: SaviInventory;
+  storage: SaviInventory;
+}
+
+export function decodePersonalStorageBatch(payload: Uint8Array): PersonalStorageBatch | null {
   try {
     const r = new Reader(payload);
     const requestId = r.string(ID_MAX);
-    const bagCapacity = r.packed();
-    const storageCapacity = r.packed();
+    const firstValue = r.packed();
+    const secondValue = r.packed();
     r.string(4096);
     const inventory = readInventory(r);
     const version = r.packed();
     const storage = readInventory(r);
-    if (!requestId || bagCapacity < 0 || storageCapacity < 0 || version < 0 || !inventory || !storage || r.remaining !== 0) {
+    if (!requestId || firstValue < 0 || secondValue < 0 || version < 0 || !inventory || !storage || r.remaining !== 0) {
       return null;
     }
     return { inventory, storage };

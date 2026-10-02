@@ -1,6 +1,23 @@
 import { contextBridge, ipcRenderer } from "electron";
-import type { PickupNotification, PickupOverlayAPI, PickupOverlayState } from "../shared/pickup-overlay.ts";
+import type {
+  OverlayComponent,
+  PickupNotification,
+  PickupOverlayAPI,
+  PickupOverlayState,
+  TrackedOverlayItem,
+} from "../shared/pickup-overlay.ts";
 import type { UpdateAPI, UpdateState } from "../shared/updates.ts";
+const TRACKED_ITEM_KINDS: Record<TrackedOverlayItem["kind"], true> = {
+  equipment: true,
+  grimoire: true,
+  artifact: true,
+  gem: true,
+  card: true,
+  material: true,
+  consumable: true,
+  cosmetic: true,
+};
+
 
 contextBridge.exposeInMainWorld("valeCompanion", {
   updates: {
@@ -16,6 +33,9 @@ contextBridge.exposeInMainWorld("valeCompanion", {
   pickupOverlay: {
     getState: () => ipcRenderer.invoke("valeCompanion:pickup-overlay", "state"),
     setEnabled: (enabled) => ipcRenderer.invoke("valeCompanion:pickup-overlay", "enabled", enabled),
+    setComponentEnabled: (component: OverlayComponent, enabled: boolean) =>
+      ipcRenderer.invoke("valeCompanion:pickup-overlay", "component", component, enabled),
+    setTrackedItems: (items: TrackedOverlayItem[]) => ipcRenderer.invoke("valeCompanion:pickup-overlay", "tracked", items),
     reposition: () => ipcRenderer.invoke("valeCompanion:pickup-overlay", "reposition"),
     finishReposition: () => ipcRenderer.invoke("valeCompanion:pickup-overlay", "finish"),
     resetPosition: () => ipcRenderer.invoke("valeCompanion:pickup-overlay", "reset"),
@@ -44,9 +64,33 @@ contextBridge.exposeInMainWorld("valeCompanion", {
 });
 
 function isPickupOverlayState(value: unknown): value is PickupOverlayState {
-  return Boolean(value) && typeof value === "object"
-    && typeof (value as PickupOverlayState).enabled === "boolean"
-    && typeof (value as PickupOverlayState).repositioning === "boolean";
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const state = value as {
+    enabled?: unknown;
+    repositioning?: unknown;
+    hotkeyAvailable?: unknown;
+    components?: unknown;
+    trackedItems?: unknown;
+  };
+  if (typeof state.enabled !== "boolean" || typeof state.repositioning !== "boolean"
+    || typeof state.hotkeyAvailable !== "boolean" || !state.components || typeof state.components !== "object"
+    || Array.isArray(state.components) || !Array.isArray(state.trackedItems)) return false;
+  const components = state.components as Record<OverlayComponent, unknown>;
+  if (typeof components.pickups !== "boolean" || typeof components.weight !== "boolean"
+    || typeof components.items !== "boolean" || typeof components.gold !== "boolean") return false;
+  if (state.trackedItems.length > 3) return false;
+  const trackedKeys = new Set<string>();
+  return state.trackedItems.every((item) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) return false;
+    const tracked = item as { itemId?: unknown; kind?: unknown; name?: unknown; icon?: unknown };
+    if (typeof tracked.itemId !== "string" || typeof tracked.kind !== "string"
+      || !Object.hasOwn(TRACKED_ITEM_KINDS, tracked.kind) || typeof tracked.name !== "string"
+      || (tracked.icon !== null && typeof tracked.icon !== "string")) return false;
+    const key = `${tracked.kind}:${tracked.itemId}`;
+    if (trackedKeys.has(key)) return false;
+    trackedKeys.add(key);
+    return true;
+  });
 }
 
 function isPickupNotification(value: unknown): value is PickupNotification {

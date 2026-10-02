@@ -4967,6 +4967,15 @@
     "section": null,
     "slot": "Cosmetic"
   },
+  "Cosmetic:Aura_Halloween": {
+    "id": "Aura_Halloween",
+    "name": "Halloween Aura",
+    "kind": "Cosmetic",
+    "icon": "icons/published-wiki-data-cosmetic-icons-aura-halloween.webp",
+    "wiki": null,
+    "section": "Aura",
+    "slot": "Cosmetic"
+  },
   "Cosmetic:Axe": {
     "id": "Axe",
     "name": "Axe",
@@ -5093,6 +5102,15 @@
     "section": "Back",
     "slot": "Cosmetic"
   },
+  "Cosmetic:Back_BoneLord": {
+    "id": "Back_BoneLord",
+    "name": "Bone Lord",
+    "kind": "Cosmetic",
+    "icon": "icons/published-wiki-data-cosmetic-icons-back-bonelord.webp",
+    "wiki": null,
+    "section": "Back",
+    "slot": "Cosmetic"
+  },
   "Cosmetic:Back_BucketofShrooms": {
     "id": "Back_BucketofShrooms",
     "name": "Bucket of Shrooms",
@@ -5118,6 +5136,15 @@
     "icon": "icons/cosmetic-back-cape-gladys.webp",
     "wiki": null,
     "section": null,
+    "slot": "Cosmetic"
+  },
+  "Cosmetic:Back_Cape_Undead": {
+    "id": "Back_Cape_Undead",
+    "name": "Undead Cape",
+    "kind": "Cosmetic",
+    "icon": "icons/published-wiki-data-cosmetic-icons-back-cape-undead.webp",
+    "wiki": null,
+    "section": "Back",
     "slot": "Cosmetic"
   },
   "Cosmetic:Back_CatBoltTail": {
@@ -6328,7 +6355,7 @@
   },
   "Cosmetic:Casual_Chest_51": {
     "id": "Casual_Chest_51",
-    "name": "Fireman Top",
+    "name": "Fireman Coat",
     "kind": "Cosmetic",
     "icon": "icons/published-wiki-data-cosmetic-icons-casual-chest-51.webp",
     "wiki": null,
@@ -6429,9 +6456,9 @@
     "id": "Casual_Chest_62",
     "name": "Red Boxing Top",
     "kind": "Cosmetic",
-    "icon": "icons/published-wiki-data-cosmetic-icons-casual-chest-62.webp",
+    "icon": "icons/cosmetic-casual-chest-62.webp",
     "wiki": null,
-    "section": "Chest",
+    "section": null,
     "slot": "Cosmetic"
   },
   "Cosmetic:Casual_Chest_63": {
@@ -6445,7 +6472,7 @@
   },
   "Cosmetic:Casual_Chest_64": {
     "id": "Casual_Chest_64",
-    "name": "Football Top",
+    "name": "Rugby Jacket",
     "kind": "Cosmetic",
     "icon": "icons/published-wiki-data-cosmetic-icons-casual-chest-64.webp",
     "wiki": null,
@@ -6778,7 +6805,7 @@
   },
   "Cosmetic:Casual_Feet_35": {
     "id": "Casual_Feet_35",
-    "name": "Bunny Shoes",
+    "name": "Bunny Slippers",
     "kind": "Cosmetic",
     "icon": "icons/published-wiki-data-cosmetic-icons-casual-feet-35.webp",
     "wiki": null,
@@ -6787,7 +6814,7 @@
   },
   "Cosmetic:Casual_Feet_36": {
     "id": "Casual_Feet_36",
-    "name": "Dino Shoes",
+    "name": "Dino Slippers",
     "kind": "Cosmetic",
     "icon": "icons/published-wiki-data-cosmetic-icons-casual-feet-36.webp",
     "wiki": null,
@@ -6796,7 +6823,7 @@
   },
   "Cosmetic:Casual_Feet_37": {
     "id": "Casual_Feet_37",
-    "name": "Bear Shoes",
+    "name": "Bear Slippers",
     "kind": "Cosmetic",
     "icon": "icons/published-wiki-data-cosmetic-icons-casual-feet-37.webp",
     "wiki": null,
@@ -6805,7 +6832,7 @@
   },
   "Cosmetic:Casual_Feet_38": {
     "id": "Casual_Feet_38",
-    "name": "Neko Shoes",
+    "name": "Neko Slippers",
     "kind": "Cosmetic",
     "icon": "icons/published-wiki-data-cosmetic-icons-casual-feet-38.webp",
     "wiki": null,
@@ -6832,7 +6859,7 @@
   },
   "Cosmetic:Casual_Feet_40": {
     "id": "Casual_Feet_40",
-    "name": "Diver Shoes",
+    "name": "Diver Flippers",
     "kind": "Cosmetic",
     "icon": "icons/published-wiki-data-cosmetic-icons-casual-feet-40.webp",
     "wiki": null,
@@ -6859,7 +6886,7 @@
   },
   "Cosmetic:Casual_Feet_43": {
     "id": "Casual_Feet_43",
-    "name": "Football Shoes",
+    "name": "Rugby Shoes",
     "kind": "Cosmetic",
     "icon": "icons/published-wiki-data-cosmetic-icons-casual-feet-43.webp",
     "wiki": null,
@@ -6886,7 +6913,7 @@
   },
   "Cosmetic:Casual_Feet_50": {
     "id": "Casual_Feet_50",
-    "name": "Monster Shoes",
+    "name": "Monster Slippers",
     "kind": "Cosmetic",
     "icon": "icons/published-wiki-data-cosmetic-icons-casual-feet-50.webp",
     "wiki": null,
@@ -6895,7 +6922,7 @@
   },
   "Cosmetic:Casual_Feet_51": {
     "id": "Casual_Feet_51",
-    "name": "Shark Shoes",
+    "name": "Shark Slippers",
     "kind": "Cosmetic",
     "icon": "icons/published-wiki-data-cosmetic-icons-casual-feet-51.webp",
     "wiki": null,
@@ -6904,7 +6931,7 @@
   },
   "Cosmetic:Casual_Feet_52": {
     "id": "Casual_Feet_52",
-    "name": "Duck Shoes",
+    "name": "Duck Slippers",
     "kind": "Cosmetic",
     "icon": "icons/published-wiki-data-cosmetic-icons-casual-feet-52.webp",
     "wiki": null,
@@ -6949,7 +6976,7 @@
   },
   "Cosmetic:Casual_Hands_10": {
     "id": "Casual_Hands_10",
-    "name": "Neko Gloves",
+    "name": "Neko Hands",
     "kind": "Cosmetic",
     "icon": "icons/published-wiki-data-cosmetic-icons-casual-hands-10.webp",
     "wiki": null,
@@ -6958,7 +6985,7 @@
   },
   "Cosmetic:Casual_Hands_11": {
     "id": "Casual_Hands_11",
-    "name": "Bear Gloves",
+    "name": "Bear Hands",
     "kind": "Cosmetic",
     "icon": "icons/published-wiki-data-cosmetic-icons-casual-hands-11.webp",
     "wiki": null,
@@ -6969,9 +6996,9 @@
     "id": "Casual_Hands_12",
     "name": "Festive Gloves",
     "kind": "Cosmetic",
-    "icon": "icons/published-wiki-data-cosmetic-icons-casual-hands-12.webp",
+    "icon": "icons/cosmetic-casual-hands-12.webp",
     "wiki": null,
-    "section": "Gloves",
+    "section": null,
     "slot": "Cosmetic"
   },
   "Cosmetic:Casual_Hands_13": {
@@ -6994,7 +7021,7 @@
   },
   "Cosmetic:Casual_Hands_15": {
     "id": "Casual_Hands_15",
-    "name": "Football Gloves",
+    "name": "Rugby Gloves",
     "kind": "Cosmetic",
     "icon": "icons/published-wiki-data-cosmetic-icons-casual-hands-15.webp",
     "wiki": null,
@@ -7003,7 +7030,7 @@
   },
   "Cosmetic:Casual_Hands_21": {
     "id": "Casual_Hands_21",
-    "name": "Monster Gloves",
+    "name": "Monster Hands",
     "kind": "Cosmetic",
     "icon": "icons/published-wiki-data-cosmetic-icons-casual-hands-21.webp",
     "wiki": null,
@@ -7012,7 +7039,7 @@
   },
   "Cosmetic:Casual_Hands_22": {
     "id": "Casual_Hands_22",
-    "name": "Duck Gloves",
+    "name": "Duck Hands",
     "kind": "Cosmetic",
     "icon": "icons/published-wiki-data-cosmetic-icons-casual-hands-22.webp",
     "wiki": null,
@@ -7048,7 +7075,7 @@
   },
   "Cosmetic:Casual_Hands_8": {
     "id": "Casual_Hands_8",
-    "name": "Bunny Gloves",
+    "name": "Bunny Hands",
     "kind": "Cosmetic",
     "icon": "icons/published-wiki-data-cosmetic-icons-casual-hands-8.webp",
     "wiki": null,
@@ -7057,7 +7084,7 @@
   },
   "Cosmetic:Casual_Hands_9": {
     "id": "Casual_Hands_9",
-    "name": "Dino Gloves",
+    "name": "Dino Hands",
     "kind": "Cosmetic",
     "icon": "icons/published-wiki-data-cosmetic-icons-casual-hands-9.webp",
     "wiki": null,
@@ -7388,6 +7415,42 @@
     "section": "Legs",
     "slot": "Cosmetic"
   },
+  "Cosmetic:Casual_Legs_26": {
+    "id": "Casual_Legs_26",
+    "name": "Brown Jeans",
+    "kind": "Cosmetic",
+    "icon": "icons/published-wiki-data-cosmetic-icons-casual-legs-26.webp",
+    "wiki": null,
+    "section": "Legs",
+    "slot": "Cosmetic"
+  },
+  "Cosmetic:Casual_Legs_27": {
+    "id": "Casual_Legs_27",
+    "name": "White Boxers",
+    "kind": "Cosmetic",
+    "icon": "icons/published-wiki-data-cosmetic-icons-casual-legs-27.webp",
+    "wiki": null,
+    "section": "Legs",
+    "slot": "Cosmetic"
+  },
+  "Cosmetic:Casual_Legs_28": {
+    "id": "Casual_Legs_28",
+    "name": "Yellow Boxers",
+    "kind": "Cosmetic",
+    "icon": "icons/published-wiki-data-cosmetic-icons-casual-legs-28.webp",
+    "wiki": null,
+    "section": "Legs",
+    "slot": "Cosmetic"
+  },
+  "Cosmetic:Casual_Legs_29": {
+    "id": "Casual_Legs_29",
+    "name": "Teal Boxers",
+    "kind": "Cosmetic",
+    "icon": "icons/published-wiki-data-cosmetic-icons-casual-legs-29.webp",
+    "wiki": null,
+    "section": "Legs",
+    "slot": "Cosmetic"
+  },
   "Cosmetic:Casual_Legs_3": {
     "id": "Casual_Legs_3",
     "name": "Blue Boxers",
@@ -7516,7 +7579,7 @@
   },
   "Cosmetic:Casual_Legs_48": {
     "id": "Casual_Legs_48",
-    "name": "Football Pants",
+    "name": "Rugby Pants",
     "kind": "Cosmetic",
     "icon": "icons/published-wiki-data-cosmetic-icons-casual-legs-48.webp",
     "wiki": null,
@@ -7638,6 +7701,24 @@
     "icon": "icons/cosmetic-chatbubble-demonic.webp",
     "wiki": null,
     "section": null,
+    "slot": "Cosmetic"
+  },
+  "Cosmetic:ChatBubble_Halloween_1": {
+    "id": "ChatBubble_Halloween_1",
+    "name": "Halloween Chat Bubble A",
+    "kind": "Cosmetic",
+    "icon": "icons/published-wiki-data-cosmetic-icons-chatbubble-halloween-1.webp",
+    "wiki": null,
+    "section": "ChatBubble",
+    "slot": "Cosmetic"
+  },
+  "Cosmetic:ChatBubble_Halloween_2": {
+    "id": "ChatBubble_Halloween_2",
+    "name": "Halloween Chat Bubble B",
+    "kind": "Cosmetic",
+    "icon": "icons/published-wiki-data-cosmetic-icons-chatbubble-halloween-2.webp",
+    "wiki": null,
+    "section": "ChatBubble",
     "slot": "Cosmetic"
   },
   "Cosmetic:ChatBubble_Kaeru": {
@@ -7888,6 +7969,24 @@
     "name": "Urban Top",
     "kind": "Cosmetic",
     "icon": "icons/published-wiki-data-cosmetic-icons-chest-urban.webp",
+    "wiki": null,
+    "section": "Chest",
+    "slot": "Cosmetic"
+  },
+  "Cosmetic:Chest_VampireLord": {
+    "id": "Chest_VampireLord",
+    "name": "Vampire Lord Coat",
+    "kind": "Cosmetic",
+    "icon": "icons/published-wiki-data-cosmetic-icons-chest-vampirelord.webp",
+    "wiki": null,
+    "section": "Chest",
+    "slot": "Cosmetic"
+  },
+  "Cosmetic:Chest_VampireQueen": {
+    "id": "Chest_VampireQueen",
+    "name": "Vampire Queen Robes",
+    "kind": "Cosmetic",
+    "icon": "icons/published-wiki-data-cosmetic-icons-chest-vampirequeen.webp",
     "wiki": null,
     "section": "Chest",
     "slot": "Cosmetic"
@@ -9557,6 +9656,24 @@
     "section": "Feet",
     "slot": "Cosmetic"
   },
+  "Cosmetic:Feet_VampireLord": {
+    "id": "Feet_VampireLord",
+    "name": "Vampire Load Shoes",
+    "kind": "Cosmetic",
+    "icon": "icons/published-wiki-data-cosmetic-icons-feet-vampirelord.webp",
+    "wiki": null,
+    "section": "Feet",
+    "slot": "Cosmetic"
+  },
+  "Cosmetic:Feet_VampireQueen": {
+    "id": "Feet_VampireQueen",
+    "name": "Vampire Queen Shoes",
+    "kind": "Cosmetic",
+    "icon": "icons/published-wiki-data-cosmetic-icons-feet-vampirequeen.webp",
+    "wiki": null,
+    "section": "Feet",
+    "slot": "Cosmetic"
+  },
   "Cosmetic:Feet_Vit": {
     "id": "Feet_Vit",
     "name": "Endurance Shoes",
@@ -10196,6 +10313,15 @@
     "section": "Gloves",
     "slot": "Cosmetic"
   },
+  "Cosmetic:Hands_VampireQueen": {
+    "id": "Hands_VampireQueen",
+    "name": "Vampire Queen Gloves",
+    "kind": "Cosmetic",
+    "icon": "icons/published-wiki-data-cosmetic-icons-hands-vampirequeen.webp",
+    "wiki": null,
+    "section": "Gloves",
+    "slot": "Cosmetic"
+  },
   "Cosmetic:Happy Chipper Hat": {
     "id": "Happy Chipper Hat",
     "name": "Happy Chipper Hat",
@@ -10687,6 +10813,24 @@
     "name": "Urban Hat",
     "kind": "Cosmetic",
     "icon": "icons/published-wiki-data-cosmetic-icons-head-urban.webp",
+    "wiki": null,
+    "section": "Head",
+    "slot": "Cosmetic"
+  },
+  "Cosmetic:Head_VampireLord": {
+    "id": "Head_VampireLord",
+    "name": "Vampire Lord Crown",
+    "kind": "Cosmetic",
+    "icon": "icons/published-wiki-data-cosmetic-icons-head-vampirelord.webp",
+    "wiki": null,
+    "section": "Head",
+    "slot": "Cosmetic"
+  },
+  "Cosmetic:Head_VampireQueen": {
+    "id": "Head_VampireQueen",
+    "name": "Vampire Queen Headress",
+    "kind": "Cosmetic",
+    "icon": "icons/published-wiki-data-cosmetic-icons-head-vampirequeen.webp",
     "wiki": null,
     "section": "Head",
     "slot": "Cosmetic"
@@ -11488,6 +11632,15 @@
     "name": "Urban Pants",
     "kind": "Cosmetic",
     "icon": "icons/published-wiki-data-cosmetic-icons-legs-urban.webp",
+    "wiki": null,
+    "section": "Legs",
+    "slot": "Cosmetic"
+  },
+  "Cosmetic:Legs_VampireLord": {
+    "id": "Legs_VampireLord",
+    "name": "Vampire Lord Pants",
+    "kind": "Cosmetic",
+    "icon": "icons/published-wiki-data-cosmetic-icons-legs-vampirelord.webp",
     "wiki": null,
     "section": "Legs",
     "slot": "Cosmetic"
@@ -12667,6 +12820,33 @@
     "name": "Hybrid Bunny",
     "kind": "Cosmetic",
     "icon": "icons/published-wiki-data-cosmetic-icons-pet-hybridbunny.webp",
+    "wiki": null,
+    "section": "Pet",
+    "slot": "Cosmetic"
+  },
+  "Cosmetic:Pet_MischiefSpirit_Black": {
+    "id": "Pet_MischiefSpirit_Black",
+    "name": "Mischief Spirit Black",
+    "kind": "Cosmetic",
+    "icon": "icons/published-wiki-data-cosmetic-icons-pet-mischiefspirit-black.webp",
+    "wiki": null,
+    "section": "Pet",
+    "slot": "Cosmetic"
+  },
+  "Cosmetic:Pet_MischiefSpirit_Purple": {
+    "id": "Pet_MischiefSpirit_Purple",
+    "name": "Mischief Spirit Purple",
+    "kind": "Cosmetic",
+    "icon": "icons/published-wiki-data-cosmetic-icons-pet-mischiefspirit-purple.webp",
+    "wiki": null,
+    "section": "Pet",
+    "slot": "Cosmetic"
+  },
+  "Cosmetic:Pet_MischiefSpirit_Red": {
+    "id": "Pet_MischiefSpirit_Red",
+    "name": "Mischief Spirit Red",
+    "kind": "Cosmetic",
+    "icon": "icons/published-wiki-data-cosmetic-icons-pet-mischiefspirit-red.webp",
     "wiki": null,
     "section": "Pet",
     "slot": "Cosmetic"
@@ -17492,6 +17672,24 @@
     "kind": "Equipment",
     "icon": "icons/published-content-game-icons-equip-grimoire-adv.webp",
     "wiki": "https://spiritvalers.com/#/grimoires/Gunslinger_1",
+    "section": "Grimoire",
+    "slot": "Grimoire"
+  },
+  "Equipment:Gunslinger_10": {
+    "id": "Gunslinger_10",
+    "name": "Lockdown Focus",
+    "kind": "Equipment",
+    "icon": "icons/published-content-game-icons-equip-grimoire-adv.webp",
+    "wiki": "https://spiritvalers.com/#/grimoires/Gunslinger_10",
+    "section": "Grimoire",
+    "slot": "Grimoire"
+  },
+  "Equipment:Gunslinger_11": {
+    "id": "Gunslinger_11",
+    "name": "Gatling Fever",
+    "kind": "Equipment",
+    "icon": "icons/published-content-game-icons-equip-grimoire-adv.webp",
+    "wiki": "https://spiritvalers.com/#/grimoires/Gunslinger_11",
     "section": "Grimoire",
     "slot": "Grimoire"
   },
